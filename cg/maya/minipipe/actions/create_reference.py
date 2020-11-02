@@ -1,4 +1,5 @@
 import os
+
 import pymel.core as pc
 
 from cg.maya.files.paths import normpath

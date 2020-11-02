@@ -1,4 +1,7 @@
 import os
+from shutil import copyfile
+from time import time
+
 import pymel.core as pc
 
 from cg.maya.files.alembic import abc_export
@@ -12,8 +15,8 @@ def invert_checkboxes(reference_list):
     for ref in reference_list:
         ref["checkbox"].setValue(not ref["checkbox"].getValue())
 
-def save_meta_from_floatfield(namespace, meta, ff):
-    meta[ff.getAnnotation()] = ff.getValue()
+def save_meta_from_control(namespace, meta, control, getFunction):
+    meta[control.getAnnotation()] = getattr(control, getFunction)()
     write_meta(meta, namespace)
 
 def set_all_start_end(se_option, reference_list, shot_meta):
@@ -37,9 +40,9 @@ def create_caches(scene, reference_list):
     caches_dir = "{}/caches".format(scene.absolute_path)
     if not os.path.isdir(caches_dir):
         os.mkdir(caches_dir)
-    cache_versions = "{}/versions".format(caches_dir)
-    if not os.path.isdir(cache_versions):
-        os.mkdir(cache_versions)
+    cache_archive_dir = "{}/archive".format(caches_dir)
+    if not os.path.isdir(cache_archive_dir):
+        os.mkdir(cache_archive_dir)
 
     for ref in reference_list:
         if ref["checkbox"].getValue():
@@ -50,6 +53,12 @@ def create_caches(scene, reference_list):
                 "start": ref["start_ff"].getValue(),
                 "end": ref["end_ff"].getValue()
             }]
+            if os.path.isfile(file):
+                copyfile(
+                    file, 
+                    "{}/{}_{}.abc".format(cache_archive_dir, cache_name, int(time()))
+                )
+
             abc_export(root, file, frame_ranges)
 
 
@@ -102,32 +111,50 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
                             v=meta["start"], w=20, pre=1, annotation="start"
                         )
                         start_ff.changeCommand(
-                            pc.Callback(save_meta_from_floatfield, ref.namespace, meta, start_ff)
+                            pc.Callback(
+                                save_meta_from_control,
+                                ref.namespace, meta, start_ff, "getValue"
+                            )
                         )
                         end_ff = pc.floatField(
                             v=meta["end"], w=20, pre=1, annotation="end"
                         )
                         end_ff.changeCommand(
-                            pc.Callback(save_meta_from_floatfield, ref.namespace, meta, end_ff)
+                            pc.Callback(
+                                save_meta_from_control,
+                                ref.namespace, meta, end_ff, "getValue"
+                            )
                         )
                         step_ff = pc.floatField(
                             v=meta["step"], w=20, pre=2, annotation="step"
                         )
                         step_ff.changeCommand(
-                            pc.Callback(save_meta_from_floatfield, ref.namespace, meta, step_ff)
+                            pc.Callback(
+                                save_meta_from_control,
+                                ref.namespace, meta, step_ff, "getValue"
+                            )
                         )
                         data["start_ff"] = start_ff
                         data["end_ff"] = end_ff
                         data["step_ff"] = step_ff
 
-                        name meta.get("cache_name", ref.namespace.split("_")[0]):
-                        i = 1
-                        if name in seen.keys():
-                            i = seen[name] + 1
-                        suggested_name = "{}_{}".format(name, i)
-                        seen[name] = i
+                        suggested_name = meta.get("cache_name", False)
+
+                        if not suggested_name:
+                            name = ref.namespace.split("_")[0]
+                            i = 1
+                            if name in seen.keys():
+                                i = seen[name] + 1
+                            suggested_name = "{}_{}".format(name, i)
+                            seen[name] = i
                         
-                        data["name_tf"] = pc.textField(text=suggested_name)
+                        data["name_tf"] = pc.textField(text=suggested_name, annotation="cache_name")
+                        data["name_tf"].changeCommand(
+                            pc.Callback(
+                                save_meta_from_control,
+                                ref.namespace, meta, data["name_tf"], "getText"
+                            )
+                        )
 
                     reference_list.append(data)
                     
