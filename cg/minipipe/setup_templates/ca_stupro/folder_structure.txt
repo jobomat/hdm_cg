@@ -1,0 +1,58 @@
+orga
+concept
+    characters
+    sets
+    color
+    moods
+    layouts
+    storyboard
+3d
+    caches
+    scenes
+        chars
+        props
+        sets
+        shots
+        xtras
+        initial.ma << initial.ma
+    sourceimages
+        textures
+            shared
+        hdris
+        imagesplanes
+        mattepaintings
+    renders
+    workspace.mel << minipipe_workspace.mel
+comp
+    renders
+edit
+    renders
+sound
+pipeline
+    OCIO
+        readme.txt << ocio_readme.txt
+    python
+        envs
+        maya
+    minipipe
+        minipipe_config.json << minipipe_config.json
+        setup_maya
+            __init__.py << minipipe_setup_init.py
+            emptyProp.png << emptyProp.png
+            emptyChar.png << emptyChar.png
+            emptySet.png << emptySet.png
+            emptyShot.png << emptyShot.png
+weekly
+    2020-10-28
+    2020-11-04
+    2020-11-11
+    2020-11-18
+    2020-11-25
+    2020-12-02
+    2020-12-09
+    2020-12-16
+    2020-12-23
+    2021-01-13
+    2021-01-20
+    2021-01-27
+    2021-02-10-nachklapp

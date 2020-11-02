@@ -1,0 +1,22 @@
+{ 
+    "project_base_path": "",
+    "maya_project_dir": "3d",
+    "minipipe_dir": "pipeline/minipipe",
+    "image_resolution": [1920, 1080],
+    "framerate": 25,
+    "image_ratios": {
+        "Flat (1.85:1)  / 1998 x 1080": [1998, 1080],
+        "Scope (2.39:1) / 2048 x 858": [2048, 858],
+        "QuadHD (16:9)  / 1920 x 1080": [1920, 1080],
+        "Full Container / 2048 x 1080":[2048, 1080]
+    },
+    "fps_map": {
+        "show": 48, 
+        "pal": 25, 
+        "ntscf": 60, 
+        "game": 15, 
+        "ntsc": 30, 
+        "film": 24, 
+        "palf": 50
+    }
+}

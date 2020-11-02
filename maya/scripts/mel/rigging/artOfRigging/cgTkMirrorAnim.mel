@@ -1,0 +1,234 @@
+//					         cgTkMirrorAnim.mel
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//							- Mirror Animation -
+//			This script will allow an animator to copy and mirror
+//			animation from one controller or joint to another.
+//
+//			The 'flipping' allows the animator to specify how they
+//			would like the keys to be scaled.
+//
+//			Directions:
+//			1. Execute cgTkMirrorAnim from the commmand line to bring up the window.
+//			2. Select two objects (base and target).
+//			3. Hit 'Apply' to copy the animation from the base, to the target.
+//
+global proc cgTkMirrorAnimMain()
+{
+	string $sel[] = `ls -sl`;
+	string $base = $sel[0];
+	string $target = $sel[1];
+	int $startTime;
+	int $endTime;
+	string $translateChannel;
+	string $rotateChannel;
+	string $scaleChannel;
+	string $customChannels[];
+	string $copyAnimationCmd;
+	
+	if (size($sel) != 2)
+	{
+		warning "Please select two objects to copy animation between. No animation copied.";
+	}else
+	{
+		//Find start/end time that user wishes to use.
+		if ((`radioButtonGrp -q -select timeRangeRadioButtonGrp`) == 1 )
+		{
+			//Use time slider
+			$startTime = `playbackOptions -q -min`;
+			$endTime = `playbackOptions -q -max`;
+		}else
+		{
+			//Use custom frame range
+			$startTime = `intFieldGrp -q -value1 timeRangeIntFieldGrp`;
+			$endTime = `intFieldGrp -q -value2 timeRangeIntFieldGrp`;
+		}
+		
+		//Find the channels the user wishes to copy.
+		if ((`checkBoxGrp -q -value1 copyChannelCheckBoxGrp`) == 1 )
+			$translateChannel = " -attribute \"translate\"";
+		if ((`checkBoxGrp -q -value2 copyChannelCheckBoxGrp`) == 1 )
+			$rotateChannel = " -attribute \"rotate\"";
+		if ((`checkBoxGrp -q -value3 copyChannelCheckBoxGrp`) == 1 )
+			$scaleChannel = " -attribute \"scale\"";
+		
+		//Check if user wishes to copy animation from custom attributes as well.
+		if ((`radioButtonGrp -q -select customChannelRadioButtonGrp`) == 1 )
+		{
+			//User selected 'ALL' custom attributes.
+			$customChannels = `listAttr -keyable -userDefined $target`;
+		}
+		if ((`radioButtonGrp -q -select customChannelRadioButtonGrp`) == 2 )
+		{
+			//User selected 'SELECTED' custom attributes.
+			$customChannels = `channelBox -query -selectedMainAttributes mainChannelBox`;
+		}
+		
+		//Construct the copy animation command
+		$copyAnimationCmd = ("copyKey -time \"" + $startTime + ":" + $endTime + "\" " + $translateChannel + $rotateChannel + $scaleChannel);
+		
+		for ($attr in $customChannels)
+		{
+			$copyAnimationCmd += (" -attribute " + $attr);
+		}
+		
+		//Tack on the name of the $base object.
+		$copyAnimationCmd += (" " + $base);
+		
+		//Copy the animation from the base object to the clipboard.
+		eval ($copyAnimationCmd);
+		
+		//Paste the animation from clipboard to the target object.
+		pasteKey -option "replace" $target;
+		
+		//Determine if the user wants to flip any of the translate channels.
+		if ($translateChannel != "")
+		{
+			//Check tx
+			if (`checkBoxGrp -q -value1 flipTranslateCheckBoxGrp`)
+				scaleKey -attribute tx -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+			
+			//Check ty
+			if (`checkBoxGrp -q -value2 flipTranslateCheckBoxGrp`)
+				scaleKey -attribute ty -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+			
+			//Check tz
+			if (`checkBoxGrp -q -value3 flipTranslateCheckBoxGrp`)
+				scaleKey -attribute tz -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+		}
+		
+		//Determine if the user wants to flip any of the rotate channels.
+		if ($translateChannel != "")
+		{
+			//Check rx
+			if (`checkBoxGrp -q -value1 flipRotateCheckBoxGrp`)
+				scaleKey -attribute rx -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+			
+			//Check ry
+			if (`checkBoxGrp -q -value2 flipRotateCheckBoxGrp`)
+				scaleKey -attribute ry -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+			
+			//Check rz
+			if (`checkBoxGrp -q -value3 flipRotateCheckBoxGrp`)
+				scaleKey -attribute rz -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+		}
+		
+		//Determine if the user wants to flip any of the scale channels.
+		if ($translateChannel != "")
+		{
+			//Check sx
+			if (`checkBoxGrp -q -value1 flipScaleCheckBoxGrp`)
+				scaleKey -attribute sx -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+			
+			//Check sy
+			if (`checkBoxGrp -q -value2 flipScaleCheckBoxGrp`)
+				scaleKey -attribute sy -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+			
+			//Check sz
+			if (`checkBoxGrp -q -value3 flipScaleCheckBoxGrp`)
+				scaleKey -attribute sz -scaleSpecifiedKeys 1 -time ($startTime + ":" + $endTime) -valueScale -1 $target;
+		}
+		print ("Animation was copied from " + $base + " to " + $target + ".\n");
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//								MAIN WINDOW
+/////////////////////////////////////////////////////////////////////////////////////////
+
+global proc cgTkMirrorAnim ()
+{
+	if (`window -q -ex mirrorAnimWindow`) deleteUI mirrorAnimWindow;
+	
+	//Main Window
+	window -title "CG Toolkit - Mirror/Copy Animation v1.0" -w 340 -h 230 mirrorAnimWindow;
+	
+	//Main Column Layout
+		columnLayout -cw 500 -adjustableColumn 1;
+		
+			separator -w 400 -h 15;
+			
+			checkBoxGrp	-numberOfCheckBoxes 3
+						-label "Copy Channels :"
+						-labelArray3 "Translate" "Rotate" "Scale"
+						-valueArray3 1 0 0
+						-columnWidth4  100 80 80 80
+						-columnAlign4 "left" "left" "left" "left" 
+						-onCommand1 ("checkBoxGrp -e -enable 1 flipTranslateCheckBoxGrp")
+						-offCommand1 ("checkBoxGrp -e -enable 0 flipTranslateCheckBoxGrp")
+						-onCommand2 ("checkBoxGrp -e -enable 1 flipRotateCheckBoxGrp")
+						-offCommand2 ("checkBoxGrp -e -enable 0 flipRotateCheckBoxGrp")
+						-onCommand3 ("checkBoxGrp -e -enable 1 flipScaleCheckBoxGrp")
+						-offCommand3 ("checkBoxGrp -e -enable 0 flipScaleCheckBoxGrp")
+						copyChannelCheckBoxGrp;
+			
+			radioButtonGrp 	-numberOfRadioButtons 3
+							-label "Custom Attr :" 
+							-labelArray3 "All" "Selected" "None"
+							-select 1
+							-columnWidth4  100 80 80 80
+							-columnAlign4 "left" "left" "left" "left"
+							customChannelRadioButtonGrp;
+			
+			separator -w 400 -h 15;
+			
+			checkBoxGrp	-numberOfCheckBoxes 3
+						-label "Flip Translate :"
+						-labelArray3 "X" "Y" "Z"
+						-valueArray3 1 0 0
+						-columnWidth4  100 80 80 80
+						-columnAlign4 "left" "left" "left" "left" 
+						flipTranslateCheckBoxGrp;
+			
+			checkBoxGrp	-numberOfCheckBoxes 3
+						-label "Flip Rotate :"
+						-labelArray3 "X" "Y" "Z"
+						-valueArray3 0 0 0
+						-columnWidth4  100 80 80 80
+						-columnAlign4 "left" "left" "left" "left"
+						-enable 0
+						flipRotateCheckBoxGrp;
+			
+			checkBoxGrp	-numberOfCheckBoxes 3
+						-label "Flip Scale :"
+						-labelArray3 "X" "Y" "Z"
+						-valueArray3 0 0 0
+						-columnWidth4  100 80 80 80
+						-columnAlign4 "left" "left" "left" "left"
+						-enable 0
+						flipScaleCheckBoxGrp;
+		
+			separator -w 400 -h 15;
+			
+			radioButtonGrp 	-numberOfRadioButtons 2
+							-label "Time Range :" 
+							-labelArray2 "Time Slider" "Start/End"
+							-select 1
+							-columnWidth3  100 80 80
+							-columnAlign3 "left" "left" "left"
+							-onCommand1 ("intFieldGrp -e -enable 0 timeRangeIntFieldGrp")
+							-offCommand1 ("intFieldGrp -e -enable 1 timeRangeIntFieldGrp")
+							timeRangeRadioButtonGrp;
+			
+			intFieldGrp -numberOfFields 2
+						-label "Start Frame -" 
+						-extraLabel "- End Frame"
+						-value1 0 
+						-value2 10
+						-columnWidth4  100 80 80 80
+						-enable 0
+						timeRangeIntFieldGrp;
+			
+			separator -w 400 -h 15;
+			
+			rowColumnLayout -nc 2
+					-columnWidth 1 165
+					-columnWidth 2 165;
+		
+				button -label "Apply" -c ("cgTkMirrorAnimMain");
+				button -label "Close" -c ("deleteUI mirrorAnimWindow");
+				
+	showWindow mirrorAnimWindow;
+}

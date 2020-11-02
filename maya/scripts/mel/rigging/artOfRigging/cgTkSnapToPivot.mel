@@ -1,0 +1,20 @@
+// 				cgTkSnaptoPivot.mel
+//
+//	Directions
+//	1.) Select a target object, then shift select 
+//	    the object you wish to move.
+//	2.) Execute 'cgTkSnapToPivot'.
+
+global proc cgTkSnapToPivot()
+{
+	//Get current selection.
+	string $currentSel[] = `ls -sl`;
+	string $base = $currentSel[0];
+	string $target = $currentSel[1];
+	
+	//Find the world location of the base object's pivot.
+	float $basePivot[] = `xform -query -worldSpace -rotatePivot $base`;
+	//Move the target object.
+	move -absolute $basePivot[0] $basePivot[1] $basePivot[2] $target ;
+	
+}

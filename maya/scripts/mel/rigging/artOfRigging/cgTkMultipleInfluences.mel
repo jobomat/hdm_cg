@@ -1,0 +1,37 @@
+//-----------------------------------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+//	SCRIPT:	cgTkMultipleInfluences.mel
+//	AUTHOR:	Oleg Alexander
+//	VERSION:	1.0v
+//
+//	DESCRIPTION:	This script is modified from multipleInfluence.mel by Javier Solsona. 
+//					It let's you select multiple influence objects and add them to your 
+//					smooth skin instead of doing them one by one. 
+//					The script will lock the weights of the influence objects to 0.
+//
+//	HOW TO USE:		Select the skin first and then all your influence objects. 
+//					Execute "cgTkMultipleInfluences".
+//
+//-----------------------------------------------------------------------------------------------------//	
+//-----------------------------------------------------------------------------------------------------//
+
+global proc cgTkMultipleInfluences()
+{
+string $selection[] = `ls -sl`;
+string $skin = $selection[0];
+
+for($x=1; $x<size($selection); $x++)
+{
+	skinCluster 
+		-edit
+		-ignoreBindPose 
+		-useGeometry
+		-dropoffRate 4 
+		-polySmoothness 0 
+		-nurbsSamples 10 
+		-lockWeights true 
+		-weight 0 
+		-addInfluence $selection[$x] $skin;
+}
+
+}

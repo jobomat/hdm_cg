@@ -1,0 +1,847 @@
+//								cgTkRigTools.mel
+//
+//				Copyright © 2004 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//			This script will automate some of the repetitive tasks involved in
+//			rigging a bipedal character. Use the different 'modules' to add all
+//			the kinematic functionality to your pre-made skeleton.
+//
+//			For a complete description of exactly how to use these tools, watch
+//			the video tutorials or refer to the included .pdf documentation.
+//
+//			Directions: 
+//			Place script file in your scripts directory and type
+//			'cgTkRigTools;' into the command prompt then hit 'enter' key to
+//			execute.
+//
+
+//////////////////////////////////////////////////////////////////////////////////
+//					createLeg PROCEDURE
+//					
+global proc createLeg()
+{
+	
+	// DETERMINE THE AXIS FOR BALL/TOE ROTATION AND IF ROTATION IS NEGATIVE OR NOT
+	string $footAxis = `radioCollection -query -select footRotRadioCollection`;
+	int $isFootNegative = 1;
+	
+	if ($footAxis == "Xn")
+	{
+		$footAxis = "X";
+		$isFootNegative = -1;
+	}
+	if ($footAxis == "Yn")
+	{
+		$footAxis = "Y";
+		$isFootNegative = -1;
+	}
+	if ($footAxis == "Zn")
+	{	
+		$footAxis = "Z";
+		$isFootNegative = -1;
+	}
+	
+	// DETERMINE WHETHER LEFT OR RIGHT LEG IS CURRENTLY BEING SETUP
+	
+	string $legSide = `radioCollection -query -select legSideCollection`;
+	string $legSideLong;
+	
+	if ($legSide == "l")
+		$legSideLong = "left";
+	else
+		$legSideLong = "right";
+	
+	// CHECK TO ENSURE THAT ALL REQUIRED OBJECTS EXIST IN THE CURRENT SCENE
+	int $legWarning = 0;
+	if( !`objExists ($legSide + "Pelvis")` 
+		&& `objExists ($legSide + "Hip")`
+		&& `objExists ($legSide + "Knee")`
+		&& `objExists ($legSide + "Ankle")`
+		&& `objExists ($legSide + "Ball")`
+		&& `objExists ($legSide + "Toe")`
+		&& `objExists ($legSideLong + "FootControl")`
+		&& `objExists ($legSideLong + "KneePoleVector")`)
+	{
+		$legWarning = 1;
+		warning "Unable to find all required objects to setup leg. Leg may not work correctly. See docs.";
+	}
+	
+	//ORIENT JOINTS
+	select -r ($legSide+"Hip");
+	joint -e -oj xyz -ch -zso;
+	
+	//DUPLICATE AND RENAME JOINT HIERARCHY
+	select -r ($legSide+"Hip");
+	duplicate -rr;
+	duplicate -rr;
+	rename ($legSide + "Hip1") ($legSide + "HipFK");
+		rename ($legSide + "HipFK|" + $legSide + "Knee") ($legSide + "KneeFK");
+		rename ($legSide + "HipFK|" + $legSide + "KneeFK|" + $legSide + "Ankle") ($legSide + "AnkleFK");
+		rename ($legSide + "HipFK|" + $legSide + "KneeFK|" + $legSide + "AnkleFK|" + $legSide + "Ball") ($legSide + "BallFK");
+		rename ($legSide + "HipFK|" + $legSide + "KneeFK|" + $legSide + "AnkleFK|" + $legSide + "BallFK|" + $legSide +"Toe") ($legSide + "ToeFK");
+
+	rename ($legSide + "Hip2") ($legSide + "HipIK");
+		rename ($legSide + "HipIK|" + $legSide + "Knee") ($legSide + "KneeIK");
+		rename ($legSide + "HipIK|" + $legSide + "KneeIK|" + $legSide + "Ankle") ($legSide + "AnkleIK");
+		rename ($legSide + "HipIK|" + $legSide + "KneeIK|" + $legSide + "AnkleIK|" + $legSide + "Ball") ($legSide + "BallIK");
+		rename ($legSide + "HipIK|" + $legSide + "KneeIK|" + $legSide + "AnkleIK|" + $legSide + "BallIK|" + $legSide +"Toe") ($legSide + "ToeIK");
+
+	//CREATE OREINT CONTRAINTS
+	select -r ($legSide + "HipFK") ;
+	select -tgl ($legSide + "Hip") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "HipIK") ;
+	select -tgl ($legSide + "Hip") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "KneeFK") ;
+	select -tgl ($legSide + "Knee") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "KneeIK") ;
+	select -tgl ($legSide + "Knee") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "AnkleFK") ;
+	select -tgl ($legSide + "Ankle") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "AnkleIK") ;
+	select -tgl ($legSide + "Ankle") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "BallFK") ;
+	select -tgl ($legSide + "Ball") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	select -r ($legSide + "BallIK") ;
+	select -tgl ($legSide + "Ball") ;
+	orientConstraint -offset 0 0 0 -weight 1;
+	
+	//CHANGE INTERPOLATION TYPES ON ORIENT CONSTRAINTS
+	setAttr ($legSide + "Hip_orientConstraint1.interpType") 2;
+	setAttr ($legSide + "Knee_orientConstraint1.interpType") 2;
+	setAttr ($legSide + "Ankle_orientConstraint1.interpType") 2;
+	setAttr ($legSide + "Ball_orientConstraint1.interpType") 2;
+	
+	//SET DRIVEN KEY FOR IK / FK SWITCH
+	addAttr -ln toeTap -k 1 -at double  -min -10 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+	addAttr -ln peelHeel -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+	addAttr -ln standTip -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+	addAttr -ln twistHeel -k 1 -at double  -min -10 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+	addAttr -ln twistToe -k 1 -at double  -min -10 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+	addAttr -ln ikFk -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 0;
+	setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1") 1;
+	setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0") 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 10;
+	setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1") 0;
+	setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0") 1;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 0;
+	setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0") 0;
+	setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1") 1;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 10;
+	setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0") 1;
+	setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1") 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 0;
+	setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0") 0;
+	setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1") 1;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 10;
+	setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0") 1;
+	setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1") 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 0;
+	setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0") 0;
+	setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1") 1;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 10;
+	setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0") 1;
+	setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1") 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0");
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1");
+	
+	setAttr ($legSideLong + "FootControl.ikFk") 0;
+	
+	//CREATE IK HANDLES FOR REVERSE FOOT & IK LEG
+	select -r ($legSide + "AnkleIK.rotatePivot") ;
+	select -add ($legSide + "BallIK.rotatePivot") ;
+	ikHandle -n ($legSide + "BallIk") -sol ikSCsolver -s 0;
+	
+	select -r ($legSide + "BallIK.rotatePivot") ;
+	select -add ($legSide + "ToeIK.rotatePivot") ;
+	ikHandle -n ($legSide + "ToeIk") -sol ikSCsolver -s 0;
+	
+	select -r ($legSide + "HipIK.rotatePivot") ;
+	select -add ($legSide + "AnkleIK.rotatePivot") ;
+	ikHandle -n ($legSide + "LegIk") -sol ikRPsolver -s 0;
+	setAttr ($legSide + "LegIk.stickiness") 1;
+	
+	//GROUP IK HANDLES FOR REVERSE FOOT
+	select -r ($legSide + "ToeIk") ($legSide + "BallIk") ;
+	group -n ($legSide + "ToeTapGroup");
+	
+	select -r ($legSide + "LegIk") ;
+	group -n ($legSide + "PeelHeelGroup");
+	
+	select -r ($legSide + "ToeTapGroup") ($legSide + "PeelHeelGroup") ;
+	group -n ($legSide + "ToePivotGroup");
+	
+	group -n ($legSide + "HeelPivotGroup");
+	
+	group -n ($legSide + "FootGroup");
+	
+	//MOVE PIVOTS OF FOOT GROUPS FOR REVERSE FOOT
+	float $worldSpaceOfJoint[];
+	
+	$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ball")`;
+	move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "ToeTapGroup.scalePivot") ($legSide + "ToeTapGroup.rotatePivot") ;
+	
+	$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ball")`;
+	move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "PeelHeelGroup.scalePivot") ($legSide + "PeelHeelGroup.rotatePivot") ;
+	
+	$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Toe")`;
+	move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "ToePivotGroup.scalePivot") ($legSide + "ToePivotGroup.rotatePivot") ;
+	
+	$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ankle")`;
+	move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "HeelPivotGroup.scalePivot") ($legSide + "HeelPivotGroup.rotatePivot") ;
+	
+	$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ball")`;
+	move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "FootGroup.scalePivot") ($legSide + "FootGroup.rotatePivot") ;
+	
+	//ATTACH FOOT CONTROLLER
+	group -n ($legSideLong + "FootControlAlign") ($legSideLong + "FootControl");
+	delete `orientConstraint ($legSide + "Ball") ($legSideLong + "FootControlAlign")`;
+	delete `pointConstraint ($legSide + "Ball") ($legSideLong + "FootControlAlign")`;
+	parent ($legSide + "FootGroup") ($legSideLong + "FootControl");
+	select -r ($legSideLong + "FootControl");
+	FreezeTransformations;
+	performFreezeTransformations(0);
+	setAttr ($legSide + "LegIk.poleVectorX") 0;
+	setAttr ($legSide + "LegIk.poleVectorY") 0;
+	setAttr ($legSide + "LegIk.poleVectorZ") 0;
+	
+	// SET DRIVEN KEY FOR REVERSE FOOT
+// TOE TAP
+	setAttr ($legSideLong + "FootControl.toeTap") 0;
+	setAttr ($legSide + "ToeTapGroup.rotate" + $footAxis) 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.toeTap") ($legSide + "ToeTapGroup.rotate" + $footAxis);
+	
+	setAttr ($legSideLong + "FootControl.toeTap") 10;
+	setAttr ($legSide + "ToeTapGroup.rotate" + $footAxis) (90*$isFootNegative);
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.toeTap") ($legSide + "ToeTapGroup.rotate" + $footAxis);
+	
+	setAttr ($legSideLong + "FootControl.toeTap") -10;
+	setAttr ($legSide + "ToeTapGroup.rotate" + $footAxis) (-90*$isFootNegative);
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.toeTap") ($legSide + "ToeTapGroup.rotate" + $footAxis);
+	setAttr ($legSideLong + "FootControl.toeTap") 0;
+	
+// PEEL HEEL
+	setAttr ($legSideLong + "FootControl.peelHeel") 0;
+	setAttr ($legSide + "PeelHeelGroup.rotate" + $footAxis) 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.peelHeel") ($legSide + "PeelHeelGroup.rotate" + $footAxis);
+	
+	setAttr ($legSideLong + "FootControl.peelHeel") 10;
+	setAttr ($legSide + "PeelHeelGroup.rotate" + $footAxis) (90*$isFootNegative);
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.peelHeel") ($legSide + "PeelHeelGroup.rotate" + $footAxis);
+	setAttr ($legSideLong + "FootControl.peelHeel") 0;
+	
+// STAND TIP
+	setAttr ($legSideLong + "FootControl.standTip") 0;
+	setAttr ($legSide + "ToePivotGroup.rotate" + $footAxis) 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.standTip") ($legSide + "ToePivotGroup.rotate" + $footAxis);
+	
+	setAttr ($legSideLong + "FootControl.standTip") 10;
+	setAttr ($legSide + "ToePivotGroup.rotate" + $footAxis) (90*$isFootNegative);
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.standTip") ($legSide + "ToePivotGroup.rotate" + $footAxis);
+	setAttr ($legSideLong + "FootControl.standTip") 0;
+	
+// TWIST HEEL
+	setAttr ($legSideLong + "FootControl.twistHeel") 0;
+	setAttr ($legSide + "HeelPivotGroup.rotateY") 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.twistHeel") ($legSide + "HeelPivotGroup.rotateY");
+	
+	setAttr ($legSideLong + "FootControl.twistHeel") -10;
+	setAttr ($legSide + "HeelPivotGroup.rotateY") 90;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.twistHeel") ($legSide + "HeelPivotGroup.rotateY");
+	
+	setAttr ($legSideLong + "FootControl.twistHeel") 10;
+	setAttr ($legSide + "HeelPivotGroup.rotateY") -90;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.twistHeel") ($legSide + "HeelPivotGroup.rotateY");
+	setAttr ($legSideLong + "FootControl.twistHeel") 0;
+	
+// TWIST TOE
+	setAttr ($legSideLong + "FootControl.twistToe") 0;
+	setAttr ($legSide + "ToePivotGroup.rotateY") 0;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.twistToe") ($legSide + "ToePivotGroup.rotateY");
+	
+	setAttr ($legSideLong + "FootControl.twistToe") -10;
+	setAttr ($legSide + "ToePivotGroup.rotateY") 90;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.twistToe") ($legSide + "ToePivotGroup.rotateY");
+	
+	setAttr ($legSideLong + "FootControl.twistToe") 10;
+	setAttr ($legSide + "ToePivotGroup.rotateY") -90;
+	setDrivenKeyframe -cd ($legSideLong + "FootControl.twistToe") ($legSide + "ToePivotGroup.rotateY");
+	setAttr ($legSideLong + "FootControl.twistToe") 0;
+	
+	//CONNECT POLE-VECTOR CONTROLS
+	select -r ($legSideLong + "KneePoleVector") ($legSide + "LegIk");
+	poleVectorConstraint -weight 1;
+
+	//IF SCRIPT GETS THIS FAR, GIVE FEEDBACK TO USER...
+	if ($legWarning == 0)
+	{
+		print "LEG CONTROLS: Sucessfully Setup!";
+	} else {
+		warning "The script has finished, but with errors. Check script editor for details.";
+	}
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc createArm()
+{
+	// DETERMINE WHETHER LEFT OR RIGHT ARM IS CURRENTLY BEING SETUP
+	string $armSide = `radioCollection -query -select armSideCollection`;
+	string $armSideLong;
+	
+	if ($armSide == "l")
+		$armSideLong = "left";
+	else
+		$armSideLong = "right";
+	
+	 //DETERMINE ELBOW ROTATE AXIS AND LOCK OTHER AXIS
+	string $elbowRotateAxis = `radioCollection -query -select elbowRotateAxisCollection`;
+	string $elbowLockAxisA;
+	string $elbowLockAxisB;
+	
+	if ($elbowRotateAxis == "y")
+	{
+		setAttr -lock true ($armSide + "Elbow.rx");
+		setAttr -lock true ($armSide + "Elbow.rz");
+		$elbowLockAxisA = "x";
+		$elbowLockAxisB = "z";
+	}
+	if ($elbowRotateAxis == "x")
+	{
+		setAttr -lock true ($armSide + "Elbow.ry");
+		setAttr -lock true ($armSide + "Elbow.rz");
+		$elbowLockAxisA = "y";
+		$elbowLockAxisB = "z";
+	}
+	if ($elbowRotateAxis == "z")
+	{
+		setAttr -lock true ($armSide + "Elbow.rx");
+		setAttr -lock true ($armSide + "Elbow.ry");
+		$elbowLockAxisA = "x";
+		$elbowLockAxisB = "y";
+	}
+	
+	//DUPLICATE AND RENAME JOINT HIERARCHY
+	select -r ($armSide + "Shoulder") ;
+	duplicate -rr;
+	duplicate -rr;
+	rename ($armSide + "Shoulder1") ($armSide + "ShoulderFK");
+		rename ($armSide + "ShoulderFK|" + $armSide + "Elbow") ($armSide + "ElbowFK");
+		rename ($armSide + "ShoulderFK|" + $armSide + "ElbowFK|" + $armSide + "Forearm") ($armSide + "ForearmFK");
+		rename ($armSide + "ShoulderFK|" + $armSide + "ElbowFK|" + $armSide + "ForearmFK|" + $armSide + "Wrist") ($armSide + "WristFK");
+	delete ($armSide + "ShoulderFK|" + $armSide + "ElbowFK|" + $armSide + "ForearmFK|" + $armSide + "WristFK|" + $armSide + "Palm");
+
+	rename ($armSide + "Shoulder2") ($armSide + "ShoulderIK");
+		rename ($armSide + "ShoulderIK|" + $armSide + "Elbow") ($armSide + "ElbowIK");
+		rename ($armSide + "ShoulderIK|" + $armSide + "ElbowIK|" + $armSide + "Forearm") ($armSide + "ForearmIK");
+		rename ($armSide + "ShoulderIK|" + $armSide + "ElbowIK|" + $armSide + "ForearmIK|" + $armSide + "Wrist") ($armSide + "WristIK");
+	delete ($armSide + "ShoulderIK|" + $armSide + "ElbowIK|" + $armSide + "ForearmIK|" + $armSide + "WristIK|" + $armSide + "Palm");
+
+	//CREATE OREINT CONTRAINTS
+	orientConstraint ($armSide + "ShoulderFK") ($armSide + "Shoulder");
+	
+	orientConstraint ($armSide + "ShoulderIK") ($armSide + "Shoulder");
+	
+	orientConstraint -skip $elbowLockAxisA -skip $elbowLockAxisB ($armSide + "ElbowFK") ($armSide + "Elbow");
+	
+	orientConstraint -skip $elbowLockAxisA -skip $elbowLockAxisB ($armSide + "ElbowIK") ($armSide + "Elbow");
+	
+	orientConstraint ($armSide + "ForearmFK") ($armSide + "Forearm");	
+	
+	orientConstraint ($armSide + "ForearmIK") ($armSide + "Forearm");
+
+	orientConstraint ($armSide + "WristFK") ($armSide + "Wrist");
+	
+	orientConstraint ($armSide + "WristIK") ($armSide + "Wrist");	
+
+	//CHANGE INTERPOLATION TYPES ON ORIENT CONSTRAINTS
+	setAttr ($armSide + "Shoulder_orientConstraint1.interpType") 2;
+	setAttr ($armSide + "Elbow_orientConstraint1.interpType") 2;
+	setAttr ($armSide + "Forearm_orientConstraint1.interpType") 2;
+	setAttr ($armSide + "Wrist_orientConstraint1.interpType") 2;
+	
+	//SET DRIVEN KEY FOR IK / FK SWITCH
+	addAttr -ln ikFk -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $armSideLong + "HandControlFK");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 0;
+	setAttr ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderIKW1") 1;
+	setAttr ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderFKW0") 0;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 10;
+	setAttr ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderIKW1") 0;
+	setAttr ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderFKW0") 1;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Shoulder_orientConstraint1." + $armSide + "ShoulderIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 0;
+	setAttr ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowFKW0") 0;
+	setAttr ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowIKW1") 1;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 10;
+	setAttr ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowFKW0") 1;
+	setAttr ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowIKW1") 0;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Elbow_orientConstraint1." + $armSide + "ElbowIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 0;
+	setAttr ($armSide + "Wrist_orientConstraint1." + $armSide + "WristFKW0") 0;
+	setAttr ($armSide + "Wrist_orientConstraint1." + $armSide + "WristIKW1") 1;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Wrist_orientConstraint1." + $armSide + "WristFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Wrist_orientConstraint1." + $armSide + "WristIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 10;
+	setAttr ($armSide + "Wrist_orientConstraint1." + $armSide + "WristFKW0") 1;
+	setAttr ($armSide + "Wrist_orientConstraint1." + $armSide + "WristIKW1") 0;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Wrist_orientConstraint1." + $armSide + "WristFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Wrist_orientConstraint1." + $armSide + "WristIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 0;
+	setAttr ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmFKW0") 0;
+	setAttr ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmIKW1") 1;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 10;
+	setAttr ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmFKW0") 1;
+	setAttr ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmIKW1") 0;
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmFKW0");
+	setDrivenKeyframe -cd ($armSideLong + "HandControlFK.ikFk") ($armSide + "Forearm_orientConstraint1." + $armSide + "ForearmIKW1");
+	
+	setAttr ($armSideLong + "HandControlFK.ikFk") 0;
+	
+	//CREATE IK HANDLE FOR ARM AND MOVE END EFFECTOR TO WRIST
+	float $worldSpaceOfJoint[];
+	
+	select -r ($armSide + "ShoulderIK.rotatePivot") ;
+	select -add ($armSide + "ForearmIK.rotatePivot") ;
+	ikHandle -n ($armSide + "ArmIK") -sol ikRPsolver -s 0;
+	rename "effector1" ($armSide + "ArmEffector");
+	
+	setAttr ($armSide + "ArmIK.ikBlend") 0;
+	setAttr ($armSide + "ArmIK.stickiness") 0;
+	$worldSpaceOfJoint= `xform -q -ws -rp ($armSide + "Wrist")`;
+	move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($armSide + "ArmEffector.scalePivot") ($armSide + "ArmEffector.rotatePivot") ;
+	delete `pointConstraint ($armSide + "ArmIK") ($armSide + "Wrist")`;
+	setAttr ($armSide + "ArmIK.ikBlend") 1;
+	setAttr ($armSide + "ArmIK.stickiness") 1;
+	
+	//ATTACH FK HAND CONTROLLER
+	group -em -n ($armSide + "WristFKNull");
+	delete `pointConstraint ($armSide + "Wrist") ($armSide + "WristFKNull")`;
+	delete `pointConstraint ($armSide + "Wrist") ($armSideLong + "HandControlFK")`;
+	delete `orientConstraint ($armSide + "WristFK") ($armSide + "WristFKNull")` ;
+	orientConstraint -skip x ($armSide + "WristFKNull") ($armSide + "WristFK"); 
+	orientConstraint -skip y -skip z ($armSide + "WristFKNull") ($armSide + "ForearmFK");
+	parent ($armSide + "WristFKNull") ($armSideLong + "HandControlFK");
+	group -n ($armSide + "WristFKParentGrp") ($armSideLong + "HandControlFK");
+	parent ($armSide + "WristFKParentGrp") ($armSide + "ElbowFK");
+	
+	//ATTACH IK HAND CONTROLLER
+	group -em -n ($armSide + "WristIKNull");
+	delete `pointConstraint ($armSide + "Wrist") ($armSide + "WristIKNull")`;
+	delete `pointConstraint ($armSide + "Wrist") ($armSideLong + "ArmControlIK")`;
+	select -r ($armSideLong + "ArmControlIK") ;
+	FreezeTransformations;
+	performFreezeTransformations(0);
+	delete `orientConstraint ($armSide + "WristIK") ($armSide + "WristIKNull")` ;
+	orientConstraint -skip x ($armSide + "WristIKNull") ($armSide + "WristIK"); 
+	orientConstraint -skip y -skip z ($armSide + "WristIKNull") ($armSide + "ForearmIK");
+	parent ($armSide + "WristIKNull") ($armSideLong + "ArmControlIK");
+	pointConstraint ($armSideLong + "ArmControlIK") ($armSide + "ArmIK");
+	
+	//CONNECT FK ARM CONTROLS
+	
+	print "ARM CONTROLS: Sucessfully Created\n";
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+global proc connectFKControl ()
+{
+	string $sel[] = `ls -sl`;
+	string $controller = $sel[0];
+	string $joint = $sel[1];
+	
+	group -em -n ($controller + "FKNull");
+	delete `pointConstraint $joint ($controller + "FKNull")`;
+	delete `pointConstraint $joint $controller`;
+	delete `orientConstraint $joint ($controller + "FKNull")`;
+	
+	orientConstraint ($controller + "FKNull") $joint;
+	parent ($controller + "FKNull") $controller;
+	print "Control Successfully Connected!";
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc mirrorShape ()
+{
+	// MIRRORS A POLY SHAPE IN -X
+	// USAGE: select the shape, then the base (symetrical) shape
+	// run the script.
+	
+	//Determine Mirror Direction
+	string $mirrorAxis = `radioCollection -query -select mirrorShapeCollection`;
+	int $posOrNeg;
+	
+	if ($mirrorAxis == "X") {
+		$mirrorAxis = "X";
+		$posOrNeg = "1";
+	} else if ($mirrorAxis == "x") {
+		$mirrorAxis = "X";
+		$posOrNeg = "-1";
+	} else if ($mirrorAxis == "Y") {
+		$mirrorAxis = "Y";
+		$posOrNeg = "1";
+	} else if ($mirrorAxis == "y") {
+		$mirrorAxis = "Y";
+		$posOrNeg = "-1";
+	} else if ($mirrorAxis == "Z") {
+		$mirrorAxis = "Z";
+		$posOrNeg = "1";
+	} else {
+		$mirrorAxis = "Z";
+		$posOrNeg = "-1";
+	}
+
+	string $sel[] = `ls -sl`;
+	string $base = $sel[1];
+	string $shape = $sel[0];
+	
+	//ERROR CHECK FOR TWO SELECTION ITEMS
+	if ($sel[1] == "")
+	{
+		warning "You must select two surfaces, the base and the blend shapes.";
+	} else 
+	{
+		//Mirror blendshape commands
+		string $nShape[] = `duplicate -name "newShape" $base`;
+		string $temp[] = `duplicate $base`;
+		string $blendName[] = `blendShape -name "tmpBlend" $shape $temp[0]`;
+		setAttr -l 0 ($temp[0] + ".scale" + $mirrorAxis);
+		setAttr ($temp[0] + ".scale" + $mirrorAxis) ($posOrNeg);
+		string $grp = `group $temp[0] $nShape[0]`;
+		setAttr ($grp + ".s") 100 100 100;
+		select -r $nShape[0] $temp[0];
+		string $wrapName[] = `doWrapArgList "2" { "1","0","0.01" }`;
+		setAttr ($blendName[0] + "." + $shape) 1;
+		DeleteHistory;
+		setAttr ($grp + ".s") 1 1 1;
+		parent -w $nShape;
+		delete $grp;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+//					cgTkQuickSDK
+//
+//			This script will create a different interface for setting driven keys. The
+//			default SDK window that comes with Maya requires you to choose which attributes
+//			to load from a list. Quick SDK automatically loads whatever attribute is selected
+//			from the channel box.
+//
+//			Also, you can enter multiple keys at the same time and the script will set
+//			all the necessary attributes thus quickening the process of setting multiple
+//			driven keys with the same values, something that often arises when setting up 
+//			the SDK on fingers/toes.
+//  
+//
+
+// PROCEDURE TO SET A DRIVEN KEY
+global proc cgTksetDrivenKey (int $keyNumber)
+{
+	//GET KEY VALUES
+	float $firstValue = `floatFieldGrp -q -value1 ("Key"+$keyNumber)`;
+	float $secondValue = `floatFieldGrp -q -value2 ("Key"+$keyNumber)`;
+	string $driver = `textFieldGrp -q -text driverInput`;
+	string $driven = `textFieldGrp -q -text drivenInput`;
+	float $driverValueBefore = `getAttr $driver`;
+	float $drivenValueBefore = `getAttr $driven`;
+	
+	//SET KEYS
+	setAttr $driver $firstValue;
+	setAttr $driven $secondValue;
+	setDrivenKeyframe -cd $driver $driven;
+	setAttr $driver $driverValueBefore;
+	setAttr $driven $drivenValueBefore;
+	
+}
+
+// PROCEDURE CALLED WHEN 'LOAD DRIVER/DRIVEN' BUTTON IS PRESSED.
+global proc cgTkloadObjAttr(string $driverOrDriven)
+{
+	string $currentSelAttr[];
+	string $currentSelObject[];
+	string $objectAndAttr = "";
+	
+	//GET SELECTED OBJECT AND ATTRIBUTE
+	$currentSelAttr = `channelBox -query -selectedMainAttributes mainChannelBox`;
+	$currentSelObject = `ls -sl -o`;
+	$objectAndAttr =  ($currentSelObject[0] + "." + $currentSelAttr[0]);
+	
+	//DETERMINE IF LOADING DRIVER OR DRIVEN
+	if ($driverOrDriven == ("driver"))
+	{
+		//LOAD DRIVER
+		textFieldGrp -e -text $objectAndAttr driverInput;
+	} else {
+		//LOAD DRIVEN
+		textFieldGrp -e -text $objectAndAttr drivenInput;
+	}
+	
+	// USER FEEDBACK
+	if ($objectAndAttr == ".")
+	{
+		warning "Nothing loaded. You must select one object and it's attribute in the channel box.\n";
+	} else {
+		print ($objectAndAttr + " has been loaded as " + $driverOrDriven + ".\n");
+	}
+}
+
+global proc openQuickSDKWindow ()
+{
+
+//								QUICK SDK MAIN WINDOW
+
+
+if (`window -q -ex krQuickSetDrivenWnd`) deleteUI krQuickSetDrivenWnd;
+
+	// CREATE SET DRIVEN KEY WINDOW
+	window -t "Quick Set Driven Key"
+		-iconName "Set Driven"
+		-s true krQuickSetDrivenWnd;
+	
+	columnLayout  -adj true -cal "left" -cat "both" 5 -columnWidth 50 -rs 5;
+	button -label "Load Driver" -al "center" -bgc 1 .75 .75 -c "cgTkloadObjAttr(\"driver\");" loadDriverButton;
+	textFieldGrp -cw 1 50 -label "Driver : " -text "driverObject.attribute" driverInput;
+	button -label "Load Driven" -al "center" -bgc .5 1 .5 -c "cgTkloadObjAttr(\"driven\");" loadDrivenButton;
+	textFieldGrp -cw 1 50 -label "Driven : " -text "drivenObject.attribute" drivenInput;
+	
+	separator -height 5 -style "in";
+
+	text "                        Enter Driver/Driven Values:";
+	rowColumnLayout -nc 2 -cal 2 "left" -cw 1 220 -cw 2 80;
+	floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #1" -value1 0.0 -value2 0.0 Key1;
+	button -label "Key" -c "cgTksetDrivenKey(1)";
+	floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #2" -value1 0.0 -value2 0.0 Key2;
+	button -label "Key" -c "cgTksetDrivenKey(2)";
+	floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #3" -value1 0.0 -value2 0.0 Key3;
+	button -label "Key" -c "cgTksetDrivenKey(3)";
+	floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #4" -value1 0.0 -value2 0.0 Key4;
+	button -label "Key" -c "cgTksetDrivenKey(4)";
+	floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #5" -value1 0.0 -value2 0.0 Key5;
+	button -label "Key" -c "cgTksetDrivenKey(5)";
+	setParent..;
+	
+	rowColumnLayout -nc 3;
+	button -label "Key Current" -c ("setDrivenKeyframe -cd (`textFieldGrp -q -text driverInput`) (`textFieldGrp -q -text drivenInput`);");
+	button -label "Key All" -c "cgTksetDrivenKey(1); cgTksetDrivenKey(2); cgTksetDrivenKey(3); cgTksetDrivenKey(4); cgTksetDrivenKey(5);" ;
+	button -label "Close" -c "window -e -vis false krQuickSetDrivenWnd;";
+	
+showWindow krQuickSetDrivenWnd;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc attachLowResGeo ()
+{
+	string $initialSelection[] = `ls -sl`;
+	string $obj;
+	string $initString;
+	int $i;
+	int $isError = 0;
+	
+	//Error checking to ensure that something is selected.
+	if ($initialSelection[0]=="")
+	{
+		warning "You must select the low-res geometry, then hit the 'connect low-res' button.\n";
+	} else
+	{
+		//Step through the selection and parent contrain each obj to it's joint
+		for ($obj in $initialSelection)
+		{
+			$initString = $obj;
+			// This command strips the name of it's last six letters (ie: 'LowGeo')
+			$obj = `substring $obj 1 (size($obj) - 6)`;
+			if(`objExists $obj`)
+			{
+				parentConstraint -mo -weight 1 $obj $initString;
+				scaleConstraint -mo -weight 1 $obj $initString;
+				print ($initString + " has been connected to " + $obj +"\n");
+			} else
+			{
+				warning ("Could not find joint: " + $obj + " to attach. Skipping." + "\n");
+				$isError = 1;
+			}
+		}
+		//Inform user if script encountered errors.
+		if ($isError == 1)
+		{
+			warning ("Low-Res Geo Attachment Failed. Check script editor for details...\n");
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+global proc shapeParentCtrl ()
+{
+	string $sel[] = `ls -sl`;
+	string $ctrl = $sel[0];
+	string $joint = $sel[1];
+	string $ctrlShape[] = `listRelatives -s -path $ctrl`;
+
+	parent -r -s $ctrlShape $joint;
+	print ($ctrl + " was shape parented to " + $joint + ".");
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+global proc cgTkRigTools ()
+{
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	//								MAIN WINDOW
+	//
+	if (`window -q -ex rigToolsWindow`) deleteUI rigToolsWindow;
+	
+	window -title "CG Toolkit - Rig Tools v1.0" -w 250 -h 200 rigToolsWindow;
+		menuBarLayout;
+			menu -label "Help";
+				menuItem -label "Online Docs / Updates" -c ("showHelp -absolute \"http://www.cgtoolkit.com\"");
+				menuItem -label "About" -c ("confirmDialog -title \"About CG Toolkit Rig Tools\" -message \"Copyright 2004 CGToolKit, All rights reserved.\\n www.cgtoolkit.com \\n Developed by : Kiaran Ritchie\\n www.kiaran.net me@kiaran.net \" -button \"Close\"");
+				scrollLayout
+	    		-verticalScrollBarThickness   16
+				-horizontalScrollBarThickness 0;
+				tabLayout;
+				
+	// LEGS TAB
+				columnLayout "Legs";
+					columnLayout;
+						button -al "center" -w 150 -label "Setup Leg" -c createLeg;
+					setParent..;
+					frameLayout -label "Xtra" -w 200 -labelAlign "center" -borderStyle "etchedIn" -collapsable true -cl 1;
+						rowColumnLayout -nc 2;
+							text "Naming Convention:";
+							text " ";
+							radioCollection legSideCollection;
+							radioButton -label "Left" l;
+							radioButton -label "Right" r;
+							radioCollection -edit -select l legSideCollection;
+							text "Choose foot axis:";
+							text " ";
+							radioCollection footRotRadioCollection;
+	 						radioButton -label "X" X;
+	 						radioButton -label "-X" Xn;
+	 						radioButton -label "Y" Y;
+							radioButton -label "-Y" Yn;
+	 						radioButton -label "Z" Z;
+	 						radioButton -label "-Z" Zn;
+	 						radioCollection -edit -select Zn footRotRadioCollection;
+							setParent..;
+						setParent..; 
+					setParent..;
+			
+	// ARMS TAB
+					columnLayout "Arms";
+					columnLayout;
+						button -al "center" -w 150 -label "Setup Arm" -c createArm;
+					setParent..;
+					frameLayout -label "Xtra" -w 200 -labelAlign "center" -borderStyle "etchedIn" -collapsable true -cl 1;
+						rowColumnLayout -nc 2;
+							text "Naming Convention:";
+							text " ";
+							radioCollection armSideCollection;
+							radioButton -label "Left" l;
+							radioButton -label "Right" r;
+							radioCollection -edit -select r armSideCollection;
+							text " ";
+							text " ";
+							text "Elbow Rotate Axis: ";
+							radioCollection elbowRotateAxisCollection;
+							radioButton -label "X" x;
+							text " ";
+							radioButton -label "Y" y;
+							text " ";
+							radioButton -label "Z" z;
+							radioCollection -edit -select y elbowRotateAxisCollection;
+							setParent..;
+						setParent..; 
+					setParent..;
+					
+	//MISC TAB
+					columnLayout "Misc";
+						rowColumnLayout -nc 2;
+							text "Select Ctrl+Joint : ";
+							button -label "Connect Controller" -bgc .392 .863 1.0 -c ("connectFKControl");
+							text "Select Shape+Base : ";
+							button -label "Mirror Blendshape" -bgc .392 .863 1.0 -c ("mirrorShape");
+							setParent..;
+							rowColumnLayout -nc 6 -cw 1 35 -cw 2 35 -cw 3 35 -cw 4 35 -cw 5 35 -cw 6 35 ;
+							radioCollection mirrorShapeCollection;
+							radioButton -label "+X" X;
+							radioButton -label "-X" x;
+							radioButton -label "+Y" Y;
+							radioButton -label "-Y" y;
+							radioButton -label "+Z" Z;
+							radioButton -label "-Z" z;
+							radioCollection -edit -select x mirrorShapeCollection;
+							setParent ..;
+							rowColumnLayout -nc 2;
+							text "Quick SDK Tool :";
+							button -label "Quick SDK" -bgc .392 .863 1.0 -c ("openQuickSDKWindow");
+							text "Attach LowRes Geo:";
+							button -label "Attach Low-Res" -bgc .392 .863 1.0 -c ("attachLowResGeo");
+							text "Select Ctrl+Joint:";
+							button -label "Shape Parent" -bgc .392 .863 1.0 -c ("shapeParentCtrl");
+							
+							setParent..;
+						setParent..; 
+					setParent..;
+	showWindow rigToolsWindow;
+}

@@ -1,0 +1,19 @@
+global proc string[] js_getAttachedObjects (string $attribute)
+{
+    // this will look at the selected objects and return a list of the attached
+    // objects
+    string $objs[0];
+    $objs = `ls -sl`;
+    string $return[0];
+    int $count = 0;
+    for ($obj in $objs)
+    {
+        if (!`attributeQuery -exists -node $obj $attribute`)
+            warning ($attribute + " does not exist on " + $obj + ".. skipping..");
+        string $con[0];
+        $con = `listConnections ($obj + "." + $attribute)`;
+        int $size = size($con);
+        appendStringArray ($return, $con, $size);
+    }
+    return $return;
+}

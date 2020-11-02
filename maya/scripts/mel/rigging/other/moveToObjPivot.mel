@@ -1,0 +1,11 @@
+global proc moveToObjPivot()
+{
+	string $currentSel[] = `ls -sl`;
+	string $base = $currentSel[0];
+	string $target = $currentSel[1];
+	
+	float $worldSpaceOfBase[] = `xform -query -worldSpace -rotatePivot $base`;
+	setAttr ($target + ".translateX") $worldSpaceOfBase[0];
+	setAttr ($target + ".translateY") $worldSpaceOfBase[1];
+	setAttr ($target + ".translateZ") $worldSpaceOfBase[2];
+}

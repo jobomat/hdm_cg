@@ -1,0 +1,317 @@
+//								cgTkRigTools.mel
+//
+//				Copyright © 2004 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//			This script will automate the repetitive task involved in
+//			rigging a leg with a reverse foot and an IK/FK switch.
+//
+//			Directions: 
+//			1.) Place the script file into your scripts directory.
+//			2.) Ensure that your scene contains all of the pre-requisites.
+//			3.) Type cgTkSetupLeg left; into the command line and press enter.
+//			4.) To setup a right leg, type: cgTkSetupLeg right;
+//	
+//			Prerequisites:
+//			Ensure that all objects are in the scene before using script.
+//			lHip > lKnee > lAnkle > lBall > lToe (all joints)
+//			leftFootControl (polygon, or curve object)
+//								OR
+//			rHip > rKnee > rAnkle > rBall > rToe (all joints)
+//			rightFootControl (polygon, or curve object)
+
+//////////////////////////////////////////////////////////////////////////////////
+//					cgTkSetupLeg PROCEDURE
+//////////////////////////////////////////////////////////////////////////////////
+
+global proc cgTkSetupLeg(string $legSideLong)
+{
+	//RECORD ERRORS IN THIS VARIABLE
+	int $legWarning = 0; 	// 0 = No Errors
+							// 1 = Error Found
+
+	// DETERMINE WHETHER LEFT OR RIGHT LEG IS CURRENTLY BEING SETUP
+	// CHECK TO ENSURE ARGUMENT IS CORRECT
+	string $legSide;
+	if (($legSideLong != "left") && ($legSideLong != "right"))
+	{
+		$legWarning = 1;
+		warning "Unkown argument. Please specify either left or right. ie: cgTkSetupLeg left; \n";
+	} else
+	{
+		if ($legSideLong == "left")
+		$legSide = "l";
+		if ($legSideLong == "right")
+		$legSide = "r";
+	}
+	
+	// CHECK TO ENSURE THAT ALL REQUIRED OBJECTS EXIST IN THE CURRENT SCENE
+	if ($legWarning == 0)
+	{
+		if	(!( (`objExists ($legSide + "Hip")`) 
+			&& 	(`objExists ($legSide + "Knee")`)
+			&& 	(`objExists ($legSide + "Ankle")`)
+			&& 	(`objExists ($legSide + "Ball")`)
+			&& 	(`objExists ($legSide + "Toe")`)
+			&& 	(`objExists ($legSideLong + "FootControl")`)))
+		{
+			$legWarning = 1;
+			warning "Unable to find all required objects to setup leg. Please ensure all objects are named properly. \n";
+		}
+	}
+	
+	//IF NO ERRORS ARE ENCOUNTERED, CONTINUE WITH SETUP
+	if ($legWarning == 1)
+	{
+		warning "The leg setup has encountered an error. Check script editor for details. \n";
+		
+	} else 
+	{
+		print "All prerequisites were found. Setup will continue. \n";
+		
+		//SET THE AXIS THAT THE FOOT ROTATES DOWNWARDS IN (-Z by default)
+		$footAxis = "Z";
+		$isFootNegative = -1; //Change this to 1 if foot axis is positive to rotate down.
+		
+		//ORIENT JOINTS
+		select -r ($legSide+"Hip");
+		joint -e -oj xyz -ch -zso;
+		
+		//DUPLICATE AND RENAME JOINT HIERARCHY
+		select -r ($legSide+"Hip");
+		duplicate -rr;
+		duplicate -rr;
+		rename ($legSide + "Hip1") ($legSide + "HipFK");
+			rename ($legSide + "HipFK|" + $legSide + "Knee") ($legSide + "KneeFK");
+			rename ($legSide + "HipFK|" + $legSide + "KneeFK|" + $legSide + "Ankle") ($legSide + "AnkleFK");
+			rename ($legSide + "HipFK|" + $legSide + "KneeFK|" + $legSide + "AnkleFK|" + $legSide + "Ball") ($legSide + "BallFK");
+			rename ($legSide + "HipFK|" + $legSide + "KneeFK|" + $legSide + "AnkleFK|" + $legSide + "BallFK|" + $legSide +"Toe") ($legSide + "ToeFK");
+	
+		rename ($legSide + "Hip2") ($legSide + "HipIK");
+			rename ($legSide + "HipIK|" + $legSide + "Knee") ($legSide + "KneeIK");
+			rename ($legSide + "HipIK|" + $legSide + "KneeIK|" + $legSide + "Ankle") ($legSide + "AnkleIK");
+			rename ($legSide + "HipIK|" + $legSide + "KneeIK|" + $legSide + "AnkleIK|" + $legSide + "Ball") ($legSide + "BallIK");
+			rename ($legSide + "HipIK|" + $legSide + "KneeIK|" + $legSide + "AnkleIK|" + $legSide + "BallIK|" + $legSide +"Toe") ($legSide + "ToeIK");
+	
+		//CREATE OREINT CONTRAINTS
+		select -r ($legSide + "HipFK") ;
+		select -tgl ($legSide + "Hip") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "HipIK") ;
+		select -tgl ($legSide + "Hip") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "KneeFK") ;
+		select -tgl ($legSide + "Knee") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "KneeIK") ;
+		select -tgl ($legSide + "Knee") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "AnkleFK") ;
+		select -tgl ($legSide + "Ankle") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "AnkleIK") ;
+		select -tgl ($legSide + "Ankle") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "BallFK") ;
+		select -tgl ($legSide + "Ball") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		select -r ($legSide + "BallIK") ;
+		select -tgl ($legSide + "Ball") ;
+		orientConstraint -offset 0 0 0 -weight 1;
+		
+		//CHANGE INTERPOLATION TYPES ON ORIENT CONSTRAINTS
+		setAttr ($legSide + "Hip_orientConstraint1.interpType") 2;
+		setAttr ($legSide + "Knee_orientConstraint1.interpType") 2;
+		setAttr ($legSide + "Ankle_orientConstraint1.interpType") 2;
+		setAttr ($legSide + "Ball_orientConstraint1.interpType") 2;
+		
+		//SET DRIVEN KEY FOR IK / FK SWITCH
+		addAttr -ln toeTap -k 1 -at double  -min -10 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+		addAttr -ln peelHeel -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+		addAttr -ln standTip -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+		addAttr -ln twistHeel -k 1 -at double  -min -10 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+		addAttr -ln twistToe -k 1 -at double  -min -10 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+		addAttr -ln ikFk -k 1 -at double  -min 0 -max 10 -dv 0 ("|" + $legSideLong + "FootControl");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 0;
+		setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1") 1;
+		setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0") 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 10;
+		setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1") 0;
+		setAttr ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0") 1;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Hip_orientConstraint1." + $legSide + "HipIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 0;
+		setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0") 0;
+		setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1") 1;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 10;
+		setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0") 1;
+		setAttr ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1") 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Knee_orientConstraint1." + $legSide + "KneeIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 0;
+		setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0") 0;
+		setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1") 1;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 10;
+		setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0") 1;
+		setAttr ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1") 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ankle_orientConstraint1." + $legSide + "AnkleIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 0;
+		setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0") 0;
+		setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1") 1;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 10;
+		setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0") 1;
+		setAttr ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1") 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallFKW0");
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.ikFk") ($legSide + "Ball_orientConstraint1." + $legSide + "BallIKW1");
+		
+		setAttr ($legSideLong + "FootControl.ikFk") 0;
+		
+		//CREATE IK HANDLES FOR REVERSE FOOT & IK LEG
+		select -r ($legSide + "AnkleIK.rotatePivot") ;
+		select -add ($legSide + "BallIK.rotatePivot") ;
+		ikHandle -n ($legSide + "BallIk") -sol ikSCsolver -s 0;
+		
+		select -r ($legSide + "BallIK.rotatePivot") ;
+		select -add ($legSide + "ToeIK.rotatePivot") ;
+		ikHandle -n ($legSide + "ToeIk") -sol ikSCsolver -s 0;
+		
+		select -r ($legSide + "HipIK.rotatePivot") ;
+		select -add ($legSide + "AnkleIK.rotatePivot") ;
+		ikHandle -n ($legSide + "LegIk") -sol ikRPsolver -s 0;
+		setAttr ($legSide + "LegIk.stickiness") 1;
+		
+		//GROUP IK HANDLES FOR REVERSE FOOT
+		select -r ($legSide + "ToeIk") ($legSide + "BallIk") ;
+		group -n ($legSide + "ToeTapGroup");
+		
+		select -r ($legSide + "LegIk") ;
+		group -n ($legSide + "PeelHeelGroup");
+		
+		select -r ($legSide + "ToeTapGroup") ($legSide + "PeelHeelGroup") ;
+		group -n ($legSide + "ToePivotGroup");
+		
+		group -n ($legSide + "HeelPivotGroup");
+		
+		group -n ($legSide + "FootGroup");
+		
+		//MOVE PIVOTS OF FOOT GROUPS FOR REVERSE FOOT
+		float $worldSpaceOfJoint[];
+		
+		$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ball")`;
+		move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "ToeTapGroup.scalePivot") ($legSide + "ToeTapGroup.rotatePivot") ;
+		
+		$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ball")`;
+		move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "PeelHeelGroup.scalePivot") ($legSide + "PeelHeelGroup.rotatePivot") ;
+		
+		$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Toe")`;
+		move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "ToePivotGroup.scalePivot") ($legSide + "ToePivotGroup.rotatePivot") ;
+		
+		$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ankle")`;
+		move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "HeelPivotGroup.scalePivot") ($legSide + "HeelPivotGroup.rotatePivot") ;
+		
+		$worldSpaceOfJoint= `xform -q -ws -rp ($legSide + "Ball")`;
+		move -a $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] ($legSide + "FootGroup.scalePivot") ($legSide + "FootGroup.rotatePivot") ;
+		
+		//ATTACH FOOT CONTROLLER
+		group -n ($legSideLong + "FootControlAlign") ($legSideLong + "FootControl");
+		delete `orientConstraint ($legSide + "Ball") ($legSideLong + "FootControlAlign")`;
+		delete `pointConstraint ($legSide + "Ball") ($legSideLong + "FootControlAlign")`;
+		parent ($legSide + "FootGroup") ($legSideLong + "FootControl");
+		select -r ($legSideLong + "FootControl");
+		FreezeTransformations;
+		performFreezeTransformations(0);
+		setAttr ($legSide + "LegIk.poleVectorX") 0;
+		setAttr ($legSide + "LegIk.poleVectorY") 0;
+		setAttr ($legSide + "LegIk.poleVectorZ") 0;
+		
+		// SET DRIVEN KEY FOR REVERSE FOOT
+	// TOE TAP
+		setAttr ($legSideLong + "FootControl.toeTap") 0;
+		setAttr ($legSide + "ToeTapGroup.rotate" + $footAxis) 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.toeTap") ($legSide + "ToeTapGroup.rotate" + $footAxis);
+		
+		setAttr ($legSideLong + "FootControl.toeTap") 10;
+		setAttr ($legSide + "ToeTapGroup.rotate" + $footAxis) (90*$isFootNegative);
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.toeTap") ($legSide + "ToeTapGroup.rotate" + $footAxis);
+		
+		setAttr ($legSideLong + "FootControl.toeTap") -10;
+		setAttr ($legSide + "ToeTapGroup.rotate" + $footAxis) (-90*$isFootNegative);
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.toeTap") ($legSide + "ToeTapGroup.rotate" + $footAxis);
+		setAttr ($legSideLong + "FootControl.toeTap") 0;
+		
+	// PEEL HEEL
+		setAttr ($legSideLong + "FootControl.peelHeel") 0;
+		setAttr ($legSide + "PeelHeelGroup.rotate" + $footAxis) 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.peelHeel") ($legSide + "PeelHeelGroup.rotate" + $footAxis);
+		
+		setAttr ($legSideLong + "FootControl.peelHeel") 10;
+		setAttr ($legSide + "PeelHeelGroup.rotate" + $footAxis) (90*$isFootNegative);
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.peelHeel") ($legSide + "PeelHeelGroup.rotate" + $footAxis);
+		setAttr ($legSideLong + "FootControl.peelHeel") 0;
+		
+	// STAND TIP
+		setAttr ($legSideLong + "FootControl.standTip") 0;
+		setAttr ($legSide + "ToePivotGroup.rotate" + $footAxis) 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.standTip") ($legSide + "ToePivotGroup.rotate" + $footAxis);
+		
+		setAttr ($legSideLong + "FootControl.standTip") 10;
+		setAttr ($legSide + "ToePivotGroup.rotate" + $footAxis) (90*$isFootNegative);
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.standTip") ($legSide + "ToePivotGroup.rotate" + $footAxis);
+		setAttr ($legSideLong + "FootControl.standTip") 0;
+		
+	// TWIST HEEL
+		setAttr ($legSideLong + "FootControl.twistHeel") 0;
+		setAttr ($legSide + "HeelPivotGroup.rotateY") 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.twistHeel") ($legSide + "HeelPivotGroup.rotateY");
+		
+		setAttr ($legSideLong + "FootControl.twistHeel") -10;
+		setAttr ($legSide + "HeelPivotGroup.rotateY") 90;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.twistHeel") ($legSide + "HeelPivotGroup.rotateY");
+		
+		setAttr ($legSideLong + "FootControl.twistHeel") 10;
+		setAttr ($legSide + "HeelPivotGroup.rotateY") -90;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.twistHeel") ($legSide + "HeelPivotGroup.rotateY");
+		setAttr ($legSideLong + "FootControl.twistHeel") 0;
+		
+	// TWIST TOE
+		setAttr ($legSideLong + "FootControl.twistToe") 0;
+		setAttr ($legSide + "ToePivotGroup.rotateY") 0;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.twistToe") ($legSide + "ToePivotGroup.rotateY");
+		
+		setAttr ($legSideLong + "FootControl.twistToe") -10;
+		setAttr ($legSide + "ToePivotGroup.rotateY") 90;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.twistToe") ($legSide + "ToePivotGroup.rotateY");
+		
+		setAttr ($legSideLong + "FootControl.twistToe") 10;
+		setAttr ($legSide + "ToePivotGroup.rotateY") -90;
+		setDrivenKeyframe -cd ($legSideLong + "FootControl.twistToe") ($legSide + "ToePivotGroup.rotateY");
+		setAttr ($legSideLong + "FootControl.twistToe") 0;
+		
+		//Setup is finished, inform user that the script has made it all the way through.
+		print ("The " + $legSideLong + " leg has been setup. \n");
+	}	
+}

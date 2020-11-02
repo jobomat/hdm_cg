@@ -1,0 +1,570 @@
+//							cgTkShotSculpt.mel
+//
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//							- Shot Sculpt v1.0 -
+//			This script will bake an animated mesh into a blendshape.
+//			Once baked, the mesh may be tweaked to refine deformations.
+//
+//			Directions:
+//			- Execute 'cgTkShotSculpt' from the command line.
+//
+
+/*	______________________________________________________
+				cgTkDeformMesh Procedure
+	Deforms a mesh with an array of displacments.
+	______________________________________________________
+*/
+global proc cgTkDeformMesh(string $targetMesh, float $dispArray[], float $factor)
+{
+	//Check to ensure mesh exists
+	if (!`objExists $targetMesh`)
+		error ("Target mesh, " + $targetMesh + ", does not exist. Deformation not applied.");
+	
+	//Get shape node of target mesh
+	string $targetMeshShape[] = `listRelatives -s $targetMesh`;
+	
+	//Check to ensure that input object is a polygon mesh
+	if (!`objectType -isType "mesh" $targetMeshShape[0]`)
+		error "Mesh must be polygonal. No deformations applied.";
+	
+	//Find number of verts in target mesh
+	int $nTargetMeshVerts[] = `polyEvaluate -vertex $targetMesh`;
+	
+	//Check to ensure vert count is the same on target and base
+	if ($nTargetMeshVerts[0] != ((size($dispArray))/3))
+		error "Target mesh must have same number of vertices. No deformation applied.";
+	
+	//Move vertices on target mesh
+	int $i; //Counter
+	float $tx; //Local translate X
+	float $ty; //Local translate Y
+	float $tz; //Local translate Z
+	int $index; //Index in disp array
+	for ($i=0; $i < $nTargetMeshVerts[0]; $i++)
+	{
+		//Calculate index in disp array
+		int $index = $i*3;
+		//Find translate X,Y and Z components
+		$tx = $dispArray[$index] * $factor;
+		$ty = $dispArray[$index+1] * $factor;
+		$tz = $dispArray[$index+2] * $factor;
+		//Move the vertex
+		move -r $tx $ty $tz ($targetMesh + ".vtx[" + $i + "]");
+	}
+}
+/*	______________________________________________________
+				cgTkCompareMesh Procedure
+	Compares two meshs and returns vertex displacements.
+	______________________________________________________
+*/
+global proc float[] cgTkCompareMesh(string $inputMesh, string $baseMesh)
+{
+	string $inputMeshShape[] = `listRelatives -s $inputMesh`;
+	string $baseMeshShape[] = `listRelatives -s $baseMesh`;
+	
+	//Check to ensure meshes exist
+	if (!((`objExists $inputMesh`) && (`objExists $baseMesh`)))
+		error "Input mesh and/or base mesh do not exist. Check spelling and try again.";
+	
+	//Check to ensure that input object is a polygon mesh
+	if (!`objectType -isType "mesh" $inputMeshShape[0]`)
+		error "Input mesh must be a polygonal mesh. No action taken.";
+	
+	//Check to ensure that base object is a polygon mesh
+	if (!`objectType -isType "mesh" $baseMeshShape[0]`)
+		error "Base mesh must be a polygonal mesh. No action taken.";
+	
+	//Find number of verts in base mesh
+	int $nBaseMeshVerts[] = `polyEvaluate -vertex $inputMesh`;
+	//Find number of verts in input mesh
+	int $nInputMeshVerts[] = `polyEvaluate -vertex $baseMesh`;
+	
+	//Check to ensure input and base have same number of verts
+	if ($nBaseMeshVerts[0] != $nInputMeshVerts[0])
+		error "Input and base mesh must have same number of vertices. No action taken.";
+	
+	
+	//Unlock translates on both meshs
+	setAttr -lock 0 ($inputMesh + ".translateX");
+	setAttr -lock 0 ($inputMesh + ".translateY");
+	setAttr -lock 0 ($inputMesh + ".translateZ");
+	setAttr -lock 0 ($baseMesh + ".translateX");
+	setAttr -lock 0 ($baseMesh + ".translateY");
+	setAttr -lock 0 ($baseMesh + ".translateZ");
+	
+	//Record original position of meshes.
+	float $inputMeshBefore[] = `getAttr ($inputMesh + ".translate")`;
+	float $baseMeshBefore[] = `getAttr ($baseMesh + ".translate")`;
+	
+	//Move both meshs to origin for world space comparison.
+	move -a -ws 0 0 0 $baseMesh;
+	move -a -ws 0 0 0 $inputMesh;
+	
+	//Create Progress Window
+	progressWindow 	-title "Shot Sculpt Progress"
+					-max $nBaseMeshVerts[0]
+					-status "Calculating Vertex Displacement: 0";
+	
+	//Compare vertex coordinate on base and input meshes
+	//Store all differences in float array, $vertDisplacements[]
+	float $inputCoords[]; //Store coords for input vert
+	float $baseCoords[]; //Store coords for base vert
+	float $vertDisplacments[]; //Store all vert displacements
+	int $i; //for loop counter
+	for ($i=0; $i<$nBaseMeshVerts[0]; $i++)
+	{
+		//Find input vertex coords
+		$inputCoords = `pointPosition -w ($inputMesh + ".vtx[" + $i +"]")`;
+		//Find base vertex coords
+		$baseCoords = `pointPosition -w ($baseMesh + ".vtx[" + $i +"]")`;
+		
+		//Calculate difference
+		int $index = $i*3;
+		$vertDisplacments[$index] = ($inputCoords[0] - $baseCoords[0]);
+		$vertDisplacments[$index+1] = ($inputCoords[1] - $baseCoords[1]);
+		$vertDisplacments[$index+2] = ($inputCoords[2] - $baseCoords[2]);
+		
+		//Update Progress Window
+		progressWindow 	-edit -step 1 -status ("Calculating Vertex Displacement: "+$i);
+	}
+
+	//Close Progress Window
+	progressWindow -endProgress;
+	
+	//Move both meshs back to original positions.
+	move -a -ws $inputMeshBefore[0] $inputMeshBefore[1] $inputMeshBefore[2] $inputMesh;
+	move -a -ws $baseMeshBefore[0] $baseMeshBefore[1] $baseMeshBefore[2] $baseMesh;
+	
+	//Return a float array containing displacements.
+	return $vertDisplacments;
+}
+/*	______________________________________________________
+				cgTkApplyEditedBakedFrame Procedure
+	Blends the sculpting edits across multiple frames.
+	______________________________________________________
+*/
+global proc cgTkApplyEditedBakedFrame()
+{
+	string $sel[] = `ls -sl`;
+	string $sculptMesh = $sel[0];
+	string $bakedMesh = $sel[1];
+	
+	//Check that two objects are selected
+	if ($bakedMesh == "")
+		error "Please select two polygon objects: a sculpted mesh and a baked mesh. (Nothing Done)";
+	
+	//Find Shape Nodes
+	string $sculptMeshShape[] = `listRelatives -s $sculptMesh`;
+	string $bakedMeshShape[] = `listRelatives -s $bakedMesh`;
+	
+	//Check that two meshes are selected
+	if (!((`objectType -isType "mesh" $sculptMeshShape[0]`) && (`objectType -isType "mesh" $bakedMeshShape[0]`)))
+		error "Non-mesh selected. Please select two polygon objects: a sculpted mesh and a baked mesh. (Nothing Done)";
+
+	//Check that first object is edit frame and second is a baked mesh.
+	if (!((`attributeExists "cgTkBakedFrameNumber" $sculptMesh`) && (`attributeExists "cgTkBakeStart" $bakedMesh`)))
+       error "Please select the sculpted mesh, followed by the baked mesh. (Nothing Done)";
+	
+	//Find current frame to edit
+	int $frameToEdit = `getAttr ($sculptMesh + ".cgTkBakedFrameNumber")`;
+	
+	//Find number of frames to blend deformations
+	int $beforeFrame = `intFieldGrp -q -value1 blendBakedFramesIntFieldGrp`;
+	int $afterFrame = `intFieldGrp -q -value2 blendBakedFramesIntFieldGrp`;
+	
+	//Find baked range from baked mesh
+	int $absStartFrame = `getAttr ($bakedMesh + ".cgTkBakeStart")`;
+	int $absEndFrame = `getAttr ($bakedMesh + ".cgTkBakeEnd")`;
+	
+	//Determine frame range to edit
+	$startEditFrame = $frameToEdit - $beforeFrame;
+	$endEditFrame = $frameToEdit + $afterFrame;
+	
+	//Find falloff type
+	int $falloffType = `radioButtonGrp -q -sl bakeFalloffRadioButtonGrp`;
+	
+	//Fetch displacement array (compare edit frame, to baked mesh)
+	float $displacements[] = `cgTkCompareMesh $sculptMesh $bakedMesh`;
+	
+	//Create Progress Window
+	progressWindow 	-title "Shot Sculpt Progress"
+					-min 0
+					-max ($beforeFrame + $afterFrame)
+					-status "Blending Deformations for Frame:";
+	
+	//Loop through each frame-mesh and apply displacments
+	int $i;
+	float $falloff;
+	float $falloffDistance; 
+	for ($i = $startEditFrame; $i <= $endEditFrame; $i++)
+	{
+		//Check if outside baked range
+		if (($i >= $absStartFrame) && ($i <= $absEndFrame))
+		{
+			//Calculate falloff distance
+			if ($i < $frameToEdit)
+					$falloffDistance = abs($startEditFrame - $i);
+				
+			if ($i > $frameToEdit)
+					$falloffDistance = abs($endEditFrame - $i);
+				
+			//Check falloff type (Linear, Exponential or None)
+			if ($falloffType == 1)
+			{
+				//Calculate Linear falloff
+				if ($i < $frameToEdit)
+					$falloff = $falloffDistance / $beforeFrame;
+				if ($i > $frameToEdit)
+					$falloff = $falloffDistance / $afterFrame;
+				if ($i == $frameToEdit)
+					$falloff = 1;
+			}
+			if ($falloffType == 2)
+			{
+				//Calculate Exponential falloff
+				if ($i < $frameToEdit)
+					$falloff = ($falloffDistance / $beforeFrame) * ($falloffDistance / $beforeFrame);
+				if ($i > $frameToEdit)
+					$falloff = ($falloffDistance / $afterFrame) * ($falloffDistance / $afterFrame);
+				if ($i == $frameToEdit)
+					$falloff = 1;
+			}
+			if ($falloffType == 3)
+			{
+				//No Falloff
+				$falloff = 1;
+			}
+			
+			//Find mesh to edit
+			string $nameOfMeshToEdit = `getAttr ($bakedMesh + ".cgTkFirstBakedFrame")`;
+			$nameOfMeshToEdit += $i;
+			
+			//Ensure that obj exists
+			if (`objExists $nameOfMeshToEdit`)
+			{
+				//Deform the mesh appropriately
+				cgTkDeformMesh $nameOfMeshToEdit $displacements $falloff;
+			}else
+			{
+				warning ("History mesh was not found. Skipping frame : " + $i + " .\n");
+			}
+		}
+		//Update Progress Window
+		progressWindow 	-edit -step 1 -status ("Blending Deformations for Frame: "+$i);
+	}
+	//Close Progress Window
+	progressWindow -endProgress;
+	
+	//User Feedback
+	print "Deformations successfully blended.\n";
+}
+/*	______________________________________________________
+				cgTkEditCurrentBakedFrame Procedure
+	Duplicates the mesh and prepares for sculpting.
+	______________________________________________________
+*/
+global proc cgTkEditCurrentBakedFrame()
+{
+	string $bakedMesh[] = `ls -sl`;
+	float $currentTime = `currentTime -q`;
+	
+	//Check to ensure base mesh exists
+	if (!`objExists $bakedMesh[0]`)
+		error "Base mesh does not exist. Please select a baked mesh. (Nothing Done)";
+	
+	//Check base mesh is polygon mesh.
+	string $meshShape[];
+	$meshShape = `listRelatives -s $bakedMesh[0]`;
+	if (!`objectType -isType "mesh" $meshShape[0]`)
+		error "Baked surface must be a polygonal mesh. (Nothing Done)";
+	
+	//Check that mesh is baked.
+	if (!`attributeExists "cgTkBakeStart" $bakedMesh[0]`)
+		error "Mesh must be baked first. (Nothing Done)";
+	
+	//Query custom attributes on baked mesh
+	string $nameOfHistoryMesh = `getAttr ($bakedMesh[0] + ".cgTkFirstBakedFrame")`;
+	$nameOfHistoryMesh = $nameOfHistoryMesh + $currentTime;
+	int $startFrame = `getAttr ($bakedMesh[0] + ".cgTkBakeStart")`;
+	int $endFrame = `getAttr ($bakedMesh[0] + ".cgTkBakeEnd")`;
+	
+	//Check to ensure histoy mesh exists
+	if (!`objExists $nameOfHistoryMesh`)
+		error "History mesh does not exist. Shot sculpting requires history frames.";
+	
+	//Duplicate the mesh
+	string $nameOfDuplicate[] = `duplicate -rr $nameOfHistoryMesh`;
+	//Rename it
+	$nameOfDuplicate[0] = `rename $nameOfDuplicate[0] ($nameOfHistoryMesh + "_EditFrame")`;
+	//Parent under the world
+	$nameOfDuplicate = `parent -w $nameOfDuplicate[0]`;
+	
+	//Unlock translates
+	setAttr -lock 0 ($nameOfDuplicate[0] + ".translateX");
+	setAttr -lock 0 ($nameOfDuplicate[0] + ".translateY");
+	setAttr -lock 0 ($nameOfDuplicate[0] + ".translateZ");
+	
+	//Unhide
+	setAttr ($nameOfDuplicate[0] + ".visibility") 1;
+	
+	//Calculate height of mesh
+	vector $top = `getAttr ($nameOfDuplicate[0] + ".boundingBoxMax")`;
+	vector $bottom = `getAttr ($nameOfDuplicate[0] + ".boundingBoxMin")`;
+	float $distance = mag($top - $bottom);
+	
+	//Move mesh out of the way
+	move -relative -worldSpaceDistance 0 $distance 0 $nameOfDuplicate[0];
+	
+	//Select it and center the camera
+	select $nameOfDuplicate[0];
+	fitPanel -selected;
+}	
+/*	______________________________________________________
+				cgTkCallToBake Procedure
+	Queries the frame range and calls the bake procedure.
+	______________________________________________________
+*/
+global proc cgTkCallToBake()
+{
+	//Determine start and end frame
+	float $startFrame;
+	float $endFrame;
+	string $sel[] = `ls -sl`;
+	
+	//Check what frame range to use.
+	if (`radioButtonGrp -q -sl bakeFramesRadioButtonGrp` == 1)
+	{
+		//From int fields
+		$startFrame = `intFieldGrp -q -v1 bakeFrameField`;
+		$endFrame = `intFieldGrp -q -v2 bakeFrameField`;
+	}else
+	{
+		//From time slider
+		$startFrame = `playbackOptions -q -min`;
+		$endFrame = `playbackOptions -q -max`;
+	}
+	
+	//Determine if Keep History On/Off
+	int $keepHistory = `checkBoxGrp -q -v1 keepHistoryCheckbox`;
+
+	//Call bake procedure.
+	string $nameOfBakedMesh = `cgTkBakeToBlendshape $startFrame $endFrame $keepHistory`;
+
+	//Add custom attribute to house start/end frames
+	addAttr -dv $startFrame -ln cgTkBakeStart -at double $nameOfBakedMesh;
+	setAttr -e -keyable false ($nameOfBakedMesh + ".cgTkBakeStart");
+	addAttr -dv $endFrame -ln cgTkBakeEnd -at double $nameOfBakedMesh;
+	setAttr -e -keyable false ($nameOfBakedMesh + ".cgTkBakeEnd");
+	//Add custom attribute to house name of history meshes
+	addAttr -ln cgTkFirstBakedFrame -dt "string" $nameOfBakedMesh;
+	setAttr -e -keyable false ($nameOfBakedMesh + ".cgTkFirstBakedFrame");
+	setAttr -type "string" ($nameOfBakedMesh + ".cgTkFirstBakedFrame") ($sel[0] + "_frame_");
+}
+/*	______________________________________________________
+				cgTkBakeToBlendshape Procedure
+	Bakes the selected mesh for the specified frames.
+	______________________________________________________
+*/
+global proc string cgTkBakeToBlendshape(int $startFrame, int $endFrame, int $keepHistory)
+{
+	string $sel[] = `ls -sl`;
+	string $mesh = $sel[0];
+	string $meshShape[];
+	float $initialTime = `currentTime -q`;
+	
+	//Check to ensure user selected an obj
+	if ($mesh == "")
+		error "Please select a polygon mesh to bake. No action taken.";
+	
+	//Check to ensure that the selected object is a polygon mesh
+	$meshShape = `listRelatives -s $mesh`;
+	if (!`objectType -isType "mesh" $meshShape[0]`)
+		error "Object must be a polygonal mesh. No action taken.";
+	
+	//Unlock translates
+	setAttr -lock 0 ($mesh + ".translateX");
+	setAttr -lock 0 ($mesh + ".translateY");
+	setAttr -lock 0 ($mesh + ".translateZ");
+	
+	int $i;
+	string $firstDuplicate;
+	string $currentDuplicate[];
+	string $nameOfBlendshape[];
+	float $targetWeight;
+	select -cl;
+	
+	//Iterate through each frame in the animation.
+	for ($i = $startFrame; $i <= $endFrame; $i++)
+	{
+		//Set the time
+		currentTime $i;
+		
+		//Calculate Target Weight for Current Frame
+		float $j = $i; //forces float operation (not integer math)
+		$targetWeight = (($j - $startFrame) / ($endFrame - $startFrame));
+		
+		//Truncate $targetWeight to 3 decimal places.
+		$targetWeight = $targetWeight *1000;
+		$targetWeight = trunc($targetWeight);
+		$targetWeight = $targetWeight/1000;
+
+		//Duplicate the mesh
+		$currentDuplicate = `duplicate -rr $mesh`;
+		
+		//If on first frame, rename duplicate 'baked'
+		if ($i == $startFrame)
+		{
+			//Rename first duplicate (meshname + "baked")
+			$firstDuplicate = `rename $currentDuplicate[0] ($mesh + "Baked")`;
+			
+		}else
+		{
+			//Tack-on frame number to name ($mesh +$i)
+			$currentDuplicate[0] = `rename $currentDuplicate[0] ($mesh + "_frame_" + $i)`;
+			
+			//Add custom attribute to house number of frame
+			addAttr -ln cgTkBakedFrameNumber -dt "string" $currentDuplicate[0];
+			setAttr -e -keyable false ($currentDuplicate[0] + ".cgTkBakedFrameNumber");
+			setAttr -type "string" ($currentDuplicate[0] + ".cgTkBakedFrameNumber") ($i);
+			
+			//Hide new mesh
+			setAttr ($currentDuplicate[0] + ".visibility") 0;
+					
+			if ($keepHistory)
+			{
+				//Add mesh to selection list
+				select -add $currentDuplicate[0];
+			}else
+			{
+				if ($i != $startFrame)
+				{
+					//Add mesh to in-between blendshape and delete target afterwards.
+					if ($i == ($startFrame+1))
+					{
+						$nameOfBlendshape = `blendShape -ib -name ($mesh + "Blendshape") $currentDuplicate[0] $firstDuplicate`;
+						blendShape -edit -ib -target $firstDuplicate 0 $currentDuplicate[0] $targetWeight $nameOfBlendshape[0];
+					}
+					blendShape -edit -ib -target $firstDuplicate 0 $currentDuplicate[0] $targetWeight $nameOfBlendshape[0];
+					delete $currentDuplicate[0];
+				}
+			}
+		}
+	}
+	
+	if ($keepHistory)
+	{
+		//Select the base object
+		select -add $firstDuplicate;
+		
+		//Create the blendshape
+		$nameOfBlendshape = `blendShape -tc 0 -ib -n ($mesh + "BakedBlendshape")`;
+		
+		//Group Targets
+		select -r `blendShape -q -t $nameOfBlendshape[0]`;
+		rename `group` ($mesh + "_BakedFrames");
+		
+		//Keyframe the blendshape weight value
+		setKeyframe -ott linear -time $startFrame -value 0 ($nameOfBlendshape[0] + "." + $mesh + "_frame_" + $endFrame);
+		setKeyframe -itt linear -time $endFrame -value 1 ($nameOfBlendshape[0] + "." + $mesh + "_frame_" + $endFrame);
+	}else
+	{
+		//Keyframe the blendshape weight value
+		setKeyframe -ott linear -time $startFrame -value 0 ($nameOfBlendshape[0] + "." + $mesh + "_frame_" + ($startFrame+1));
+		setKeyframe -itt linear -time $endFrame -value 1 ($nameOfBlendshape[0] + "." + $mesh + "_frame_" + ($startFrame+1));
+	}
+	
+	//Hide Original Mesh
+	setAttr ($mesh + ".visibility") 0;
+	
+	//Reset current time
+	currentTime $initialTime;
+	
+	//Select Baked Mesh
+	select -r $firstDuplicate;
+	
+	//Print Feedback
+	print ("The mesh, \"" + $mesh + "\" was baked from frame " + $startFrame + " to " + $endFrame + ".\n");
+	
+	//Return name of baked mesh.
+	return $firstDuplicate;
+}
+
+/*	______________________________________________________
+				cgTkShotSculpt Procedure
+	Entry point for the script. Displays the window.
+	______________________________________________________
+*/
+global proc cgTkShotSculpt ()
+{
+	if (`window -q -ex shotSculptWindow`) deleteUI shotSculptWindow;
+	
+	//Main Window
+	window -title "CG Toolkit - Shot Sculpt v1.0" -w 310 -h 263 -iconName "Shot Sculpt" shotSculptWindow;
+	
+		//Main Column Layout
+		columnLayout;
+		
+			//Bake Mesh Layout
+			frameLayout -w 300 -label "1. Bake Mesh" 
+						-labelAlign "center" 
+						-collapsable 0
+						-borderStyle etchedIn
+						-marginHeight 5  -marginWidth 5;
+				columnLayout -adj 1;
+					radioButtonGrp 	-numberOfRadioButtons 2 
+									-label "Frames: " 
+									-labelArray2 "Start/End" "Time Slider"
+									-ad3 true
+									-cl3 "center" "left" "left"
+									-sl 2
+									-cc1 ("intFieldGrp -e -enable 1 bakeFrameField")
+									-cc2 ("intFieldGrp -e -enable 0 bakeFrameField")
+									bakeFramesRadioButtonGrp;
+					intFieldGrp 	-numberOfFields 2
+									-label "Start   "
+									-extraLabel "End"
+									-ad4 true
+									-cl4 "right" "left" "left" "left"
+									-enable 0
+									bakeFrameField;
+					checkBoxGrp -label "Keep History Meshes" -cw 1 180 -v1 1 keepHistoryCheckbox;
+					button 	-label "Bake to Blendshapes" -c ("cgTkCallToBake") ;
+				setParent..;
+			setParent..;
+			
+			//Shot Sculpt Layout
+			frameLayout -w 300 -label "2. Shot Sculpting" 
+						-labelAlign "center" 
+						-collapsable 0
+						-borderStyle etchedIn
+						-marginHeight 5  -marginWidth 5;
+				columnLayout -adj 1;
+					rowColumnLayout -nc 2 -cw 1 140 -cw 2 140;
+						text -align "right" "Select Baked Mesh : ";
+						button -label "Edit Current Frame" -c ("cgTkEditCurrentBakedFrame");
+						text -align "right" "Select Sculpted Mesh : ";
+						button -label "Apply Changes" -c ("cgTkApplyEditedBakedFrame");
+					setParent..;
+					separator -h 10;
+					text -align "center" "Blend Edits (Frames) :";
+					intFieldGrp -numberOfFields 2
+									-label "Before   "
+									-extraLabel "After"
+									-ad4 true
+									-cl4 "right" "left" "left" "left"
+									-value1 5 -value2 5
+									blendBakedFramesIntFieldGrp;
+					radioButtonGrp 	-numberOfRadioButtons 3 
+									-label "Falloff: " 
+									-labelArray3 "Linear" "Exponential" "None"
+									-cw4 50 50 80 80
+									-cl4 "center" "left" "left" "left"
+									-sl 1
+									bakeFalloffRadioButtonGrp;
+					
+	//Show Main Window Command
+	showWindow shotSculptWindow;
+}

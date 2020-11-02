@@ -1,0 +1,3690 @@
+/***************************************************************************************
+Script: jcAnimCS()
+****************************************************************************************
+
+Creation Date:
+		Nov. 13, 2004
+
+Author:
+		Jake Callery, jcallery@subvoicestudios.com
+
+Description:
+		Interface to Copy/Save/Import rig & joint animations regardless of scale
+
+Requires:
+		Maya 6.0
+
+Last Updated:
+		Feb. 05, 2005
+**************************************************************************************/
+
+//Declare Local procs
+/***********************************************
+getAbsLoc
+Arguments:
+	string $myObjName - this is the object name
+	string $myAttr - this is the attribute name
+return:
+	float $absValue - this is the absolute 
+
+notes:
+	This proc will only work for .translate, .rotate and .scale 
+************************************************/
+proc float getAbsLoc(string $myObjName, string $myAttr)
+{//getAbsLoc
+	float $absVal;
+	string $pConstNode[];
+	string $sConstNode[];
+	string $options;
+
+	float $tempVals[];
+
+	if($myAttr == "translateX" ||
+	   $myAttr == "translateY" ||
+	   $myAttr == "translateZ" ||
+	   $myAttr == "rotateX" ||
+	   $myAttr == "rotateY" ||
+	   $myAttr == "rotateZ" ||
+	   $myAttr == "scaleX" ||
+	   $myAttr == "scaleY" ||
+	   $myAttr == "scaleZ")
+		   {//good to go
+			//Build options for the constraints
+			switch($myAttr)
+			{//build options
+				case "translateX":
+					$tempVals = `xform -q -worldSpace -translation $myObjName`;
+					$absVal = $tempVals[0];
+					break;
+				case "translateY":
+					$tempVals = `xform -q -worldSpace -translation $myObjName`;
+					$absVal = $tempVals[1];
+					break;
+				case "translateZ":
+					$tempVals = `xform -q -worldSpace -translation $myObjName`;
+					$absVal = $tempVals[2];
+					break;
+				case "rotateX":
+					$tempVals = `xform -q -worldSpace -rotation $myObjName`;
+					$absVal = $tempVals[0];
+					break;
+				case "rotateY":
+					$tempVals = `xform -q -worldSpace -rotation $myObjName`;
+					$absVal = $tempVals[1];
+					break;
+				case "rotateZ":
+					$tempVals = `xform -q -worldSpace -rotation $myObjName`;
+					$absVal = $tempVals[2];
+					break;
+				case "scaleX":
+					$tempVals = `xform -q -worldSpace -scale $myObjName`;
+					$absVal = $tempVals[0];
+					break;
+				case "scaleY":
+					$tempVals = `xform -q -worldSpace -scale $myObjName`;
+					$absVal = $tempVals[1];
+					break;
+				case "scaleZ":
+					$tempVals = `xform -q -worldSpace -scale $myObjName`;
+					$absVal = $tempVals[2];
+					break;
+				default:
+					break;
+			}//build options
+		   }//good to go
+
+	   else
+		   {//not a standard location attribute
+			error ("getAbsLoc cannot handle the attribute: " + $myAttr + "!\n");		
+		   }//not a standard location attribute
+	
+
+	return $absVal;
+
+}//getAbsLoc
+
+/***********************************************
+getAbsTransScale
+Arguments:
+	string $myObjName - this is the object name
+	string $myAttr - this is the attribute name
+	float $myValue
+return:
+	none
+
+notes:
+	This proc will only work for .translate, .rotate and .scale 
+	This proc uses parent constraint and scale constraint to work properly,
+	therefore, custom attributes will not work!  Using this method to set
+	absolute locations instead of xform allows the rig to take care of its
+	own values, which allows for more diversity on what kind of rigs it will
+	work on.
+************************************************/
+proc setAbsLoc(string $myObjName, string $myAttr, float $myValue)
+{//getAbsTransScale
+	float $absVal;
+	string $pConstNode[];
+	string $sConstNode[];
+	string $options;
+
+	float $tempVals[];
+
+	if($myAttr == "translateX" ||
+	   $myAttr == "translateY" ||
+	   $myAttr == "translateZ" ||
+	   $myAttr == "rotateX" ||
+	   $myAttr == "rotateY" ||
+	   $myAttr == "rotateZ" ||
+	   $myAttr == "scaleX" ||
+	   $myAttr == "scaleY" ||
+	   $myAttr == "scaleZ")
+		   {//good to go
+			//Build options for the constraints
+			switch($myAttr)
+			{//build options
+				case "translateX":
+					$tempVals = `xform -q -translation $myObjName`;
+					xform -translation $myValue $tempVals[1] $tempVals[2] $myObjName;
+					break;
+				case "translateY":
+					$tempVals = `xform -q -translation $myObjName`;
+					xform -translation $tempVals[0] $myValue $tempVals[2] $myObjName;
+					break;
+				case "translateZ":
+					$tempVals = `xform -q -translation $myObjName`;
+					xform -translation $tempVals[0] $tempVals[1] $myValue $myObjName;
+					break;
+				case "rotateX":
+					$tempVals = `xform -q -rotation $myObjName`;
+					xform -rotation $myValue $tempVals[1] $tempVals[2] $myObjName;
+					break;
+				case "rotateY":
+					$tempVals = `xform -q -rotation $myObjName`;
+					xform -rotation $tempVals[0] $myValue $tempVals[2] $myObjName;
+					break;
+				case "rotateZ":
+					$tempVals = `xform -q -rotation $myObjName`;
+					xform -rotation $tempVals[0] $tempVals[1] $myValue $myObjName;
+					break;
+				case "scaleX":
+					$tempVals = `xform -q -r -scale $myObjName`;
+					xform -ws -scale $myValue $tempVals[1] $tempVals[2] $myObjName;
+
+					break;
+				case "scaleY":
+					$tempVals = `xform -q -r -scale $myObjName`;
+					xform -ws -scale $tempVals[0] $myValue $tempVals[2] $myObjName;
+
+					break;
+				case "scaleZ":
+					$tempVals = `xform -q -r -scale $myObjName`;
+					xform -ws -scale $tempVals[0] $tempVals[1] $myValue $myObjName;
+
+					break;
+				default:
+					break;
+			}//build options
+		   }//good to go
+
+	   else
+		   {//not a standard location attribute
+			error ("setAbsLoc cannot handle the attribute: " + $myAttr + "!\n");		
+		   }//not a standard location attribute
+
+}//setAbsLoc
+
+/******************************************************
+jcIsRoot
+
+Arguments:
+	string $myObj - the object that may be a root joint
+
+Returns:
+	int - 1 if its a root joint, 0 if not
+
+Notes:
+	This procedure will only work correctly on joints.
+	Please make sure that only joints are passed to it.
+*******************************************************/
+proc int jcIsRoot(string $myObj)
+{//jcIsRoot
+	int $isJoint = 0;
+	string $parents[];
+
+	//see if there are any parents to the current object
+	$parents = `listRelatives -parent -fullPath $myObj`;
+
+	//if there are no parents, then it is the root
+	if(`size $parents` == 0)
+		{//return true
+			return 1;
+		}//return true
+
+	//if there are parents, make sure they are a joint
+	//if the parent it not a joint, then the joint is the root of that
+	//chain
+	else
+		{//is it a joint
+			for($each in $parents)
+				{//check to see if its a joint
+					if(`objectType -isType "joint" $each`)
+						{//its a joint
+							$isJoint = 1;
+						}//its a joint
+				}//check to see if its a joint
+			if ($isJoint)
+				{//not the root
+					return 0;
+				}//not the root
+			else
+				{//it is the root
+					return 1;
+				}//it is the root
+		}//is it a joint
+		
+}//jcIsRoot
+
+/*********************************************************************************
+appendToArray
+
+Arguments:
+	string $array1[] - the first array
+	string $array2[] - the array to be tacked on the the end of $array1
+
+Returns:
+	string[] - returns the combined arrays
+
+Notes:
+	Appends an array to the end of another array
+***********************************************************************************/
+proc string[] appendToArray(string $array1[], string $array2[])
+{//appendToArray
+	int $i;
+	int $j;
+
+	//combine the two sets of files
+	$j=(`size $array1`);
+	for($i=0; $i<(`size $array2`); $i++, $j++)
+		{//append
+			$array1[$j] = $array2[$i];
+		}//append
+
+	return $array1;
+}//appendToArray
+
+
+
+/*************************************************************************
+listMyFiles
+
+Arguments:
+	string $startPath - the path to start the file search with
+	string $filesArray - the array that holds the paths to the files
+	int $doRecursion - 1 walk through the paths recursively
+			   0 only use the top level path to look for files
+
+Returns:
+	string[]  - returns all of the files that end in .ma or .mb
+		    found in the search
+
+Notes:
+	This returns all of the .ma or .mb files found in a given path
+************************************************************************/
+proc string[] listMyFiles(string $startPath, string $filesArray[], int $doRecursion)
+{//listMyFiles
+
+//local vars
+	string $myDirs[];
+	string $myFiles[];
+	string $myTempFiles[];
+	string $wholePath;
+
+	int $pathLength;
+	int $j;
+	int $i;
+	int $q;
+
+	if($doRecursion == 1)
+		{//do recursion
+			//get list of dirs
+			//add slash if needed
+			$pathLength = size($startPath);
+			if(`substring $startPath $pathLength $pathLength` != "/")
+				{//add slash
+					$startPath = ($startPath + "/");				
+				}//add slash
+
+			//make sure its a dir, not a file path
+			if(`filetest -d $startPath`)
+				{//its a dir
+					$myDirs = `getFileList -folder $startPath`;
+
+					//go into each dir
+					for($each in $myDirs)
+						{//look in each dir
+							//build complete path
+							$wholePath = ($startPath + $each);				
+
+							//start recursion
+							$tempArray = listMyFiles($wholePath, $filesArray, 1);
+
+							//combine lists
+							appendToArray($filesArray, $tempArray);
+						}//look in each dir
+				}//its a dir
+			}//do recursion
+	//make sure its a dir
+	if(`filetest -d $startPath`)
+		{//its a dir
+			//get a list of the .ma and .mb files for the current dir
+			$myFiles = `getFileList -folder $startPath -filespec "*.ma"`;
+			$myTempFiles = `getFileList -folder $startPath -filespec "*.mb"`;
+
+			//combine files
+			appendToArray($myFiles, $myTempFiles);
+
+			//add full paths to the array (put the path infront of the filename)
+			for ($q=0; $q < `size $myFiles`; $q++)
+				{//add start path
+					$myFiles[$q] = ($startPath + $myFiles[$q]);
+				}//add start path
+		}//its a dir
+
+	//return the resulting array
+	return $myFiles;
+}//listMyFiles
+
+/***************************************************
+jcAddToList()
+Arguments:
+	string $myObjectList[] - array of object names
+				to add to the list
+	string $myList - name of the textScrollList to add item(s) to
+
+	int $ignoreDup - check for duplicate?
+	
+Returns:
+	none
+
+Notes:
+	none
+***************************************************/
+global proc jcAddToList(string $myObjList[], string $myList, int $ignoreDup)
+{//jcAddToList
+	string $allListItems[];
+	int $isDupe = 0;
+
+	//Step through the list of objects selected and 
+	//append them to the list
+	for($eachObject in $myObjList)
+		{//step through selection list
+			//First grab the contents of the list so we can check for duplicates
+			$allListItems = `textScrollList -query -allItems $myList`;
+
+			for($eachItem in $allListItems)
+				{//check for dupes
+					if($eachObject == $eachItem)
+						{//set dupe flag
+							$isDupe = 1;
+						}//set dupe flag
+				}//check for dupes
+
+			//Edit the list and append new item
+			//if not a duplicate, add to list
+			if($isDupe != 1 || $ignoreDup == 1)
+				{//add to list
+					textScrollList
+						-edit
+						-append $eachObject
+						$myList;
+				}//add to list
+			//reset the $isDupe Flag
+			$isDupe = 0;
+		}//step through selection list
+}//jcAddToList
+
+/***************************************************
+jcRemoveFromList()
+Arguments:
+	string $myList - name of textScrollList to remove item(s) from
+	
+Returns:
+	none
+
+Notes:
+	none
+***************************************************/
+global proc jcRemoveFromList(string $myList)
+{ //jcRemoveFromList
+	string $mySelection[];
+	//Query the textScrollList to see what is selected
+	$mySelection = `textScrollList -q -selectItem $myList`; 
+
+	//Remove each selected item
+	for($each in $mySelection)
+		{ //remove each item
+		//Edit the textScrollList and remove selected
+			textScrollList
+			-edit
+			-removeItem $each
+			$myList;
+		} //remove each item
+
+} //jcRemoveFromList
+
+/**********************************************************************************
+jcSaveAnimFile
+
+Arguments:
+	string $myList - the Name of the textScroll List to get 
+			 the object names from
+	string $myPath - This contains a path to save the file to
+			 If no path is specified (ie. "") then it
+			 will display a prompt asking for the path
+	string $fileType - "savePoseOnly" or "saveAnimation"
+	int $rangeStart - the first frame of the animation
+	int $rangeEnd - the last frame of the animation
+	int $absFrame - 1 to store frames as their actual frame numbers
+			0 to store frames shifted so the first frame is 0
+	string $valueType - bakeKeyVal or relKeyVal - how to store the values
+
+Returns:
+	none
+
+Notes:
+	This proc saves out the pose info or the animation info to a file specified
+	by the user either in the save file dialog or through the quickSave field.
+***********************************************************************************/
+global proc jcSaveAnimFile(string $myList, string $myPath, string $fileType, int $rangeStart, int $rangeEnd, int $absFrame, string $valueType)
+{//jcSaveAnimFile
+
+	//Declare various local vars used in this proc
+	string $myFilePath;
+	string $each;
+	string $thisAttrib;
+	int $myFileId;
+
+	int $myCount;
+
+	float $tempVal;
+
+	string $myAttribList[];
+	string $savePromptDialog = "noDialog";
+	string $myItems[] = `textScrollList -q -allItems $myList`;
+	string $myValue;
+	string $timeRange;
+	string $currentFullName;
+
+	string $preFileArray[];
+
+	string $animationDriver;
+	string $driverTemp[];
+
+	int $firstKey;
+	int $lastKey;
+	int $minusOffset;
+
+	int $tempFirstKey;
+	int $tempLastKey;
+
+	int $skip;
+
+	int $preFileCount;
+
+	string $myRoot;	
+
+	string $tempString;
+	int $tempSize;
+
+	float $percent = 0.0;
+	int $progressAmount = 0;
+	int $progressCount = 0;
+
+	//Declare vars used to store animation key info
+	string $keyVals;
+	float $valTemp[];
+
+	string $inTanTypes;
+	string $inTanTypeTemp[];
+
+	string $outTanTypes;
+	string $outTanTypeTemp[];
+	
+	string $inTanWeights;
+	float $inTanWeightsTemp[];
+
+	string $outTanWeights;
+	float $outTanWeightsTemp[];
+
+	string $inTanAngles;
+	float $inTanAnglesTemp[];
+
+	string $outTanAngles;
+	float $outTanAnglesTemp[];
+
+
+	//If QuickSave is not on, create our own file save dialog as
+	//there is none built into Maya.
+	//This will return which button is pressed to dismiss the dialog
+
+	//Open a save file dialog
+	if($myPath == "")
+		{//Show dialog
+			$savePromptDialog = `promptDialog -title "Save File"
+				     -message "Specify Path to Save file (include file Name)"
+				     -button "OK"
+				     -button "Cancel"
+				     -dismissString "Cancel"
+				     -defaultButton "OK"`;
+
+			//Deal with response or QuickSave feature
+			if ($savePromptDialog != "Cancel")
+				{//get path
+					//Get textField result from Prompt
+					$myFilePath = `promptDialog -q`;
+				}//get path
+			else
+				{//set path to nothing
+					$myFilePath = "";
+				}//set path to nothing
+		}//Show dialog
+
+	else
+		{//use $myPath
+			$myFilePath = $myPath;
+		}//use $myPath
+
+	if($myFilePath != "")
+		{//save the file
+			//Open File for Write
+			//$myFileId holds the internal ID number for the new file
+			$myFileId = `fopen $myFilePath "w"`;
+
+			//Display the saved file type to the user
+			print ("FileType: " + $fileType  + "\n");
+
+			//open up progress window
+			progressWindow
+				-title "Saving File..."
+				-progress $progressAmount
+				-status "Saving: 0%"
+				-isInterruptable true;
+
+			if($fileType == "savePoseOnly")
+				{//write out pose file
+
+					//Write out header to the file with fprint "filePrint"
+					fprint $myFileId "POSE\n";
+
+					//Write out value type (absolute or relative)
+					if($valueType == "bakeKeyValue")
+						{//do absolute
+							fprint $myFileId "valueType: BAKED\n";
+						}//do absolute
+					else if ($valueType == "relKeyValue")
+						{//do relative
+							fprint $myFileId "valueType: RELATIVE\n";
+						}//do relative
+					else
+						{//unknown type
+							error ($valueType + " is an unknown value type!\n");
+						}//unknown type
+
+					//List Attributes for each object in PoseList	
+					for($each in $myItems)
+					{//Do each object in list
+						//Determine Progress Amount
+						$percent = (((float)$progressCount)/(`size $myItems`));
+						$progressAmount = ($percent * 100);
+
+						//update progress window
+						if(`progressWindow -query -isCancelled`)
+							{//warning
+								warning("Not all items were saved! \(user cancelled\)\n");
+								break;
+							}//warning
+						progressWindow
+							-edit
+							-progress $progressAmount
+							-status ("Saving: " + $progressAmount + "%");
+
+						//joints only?
+						if($valueType == "bakeKeyValue")
+							{//make sure object is a joint
+								if(!(`objectType -isType "joint" $each`))
+									{//no joint, skip
+										warning ($each + " is not a Joint, skipping...\n");
+										continue;
+									}//no joint, skip
+							}//make sure object is a joint
+
+						//Grab a list of attributes from the current item
+						//$myAttribList = eval("listAttr -keyable -scalar -visible " + $each);
+						$myAttribList = `listAttr -keyable -scalar -visible $each`;
+
+						//write object name to the open file
+						fprint $myFileId $each;
+
+						//save rotation order for the entire object
+						fprint $myFileId (" rotateOrder " + `getAttr (($each + ".rotateOrder"))`);
+
+						//write each attribute name and value to the file
+						for($thisAttrib in $myAttribList)
+							{//Do each attrib
+								if($valueType == "bakeKeyValue")
+									{//do baked
+										//determine if this joint is a root joint
+										//if so get translation as well as rotation								
+										if($thisAttrib == "translateX" ||
+										   $thisAttrib == "translateY" ||
+										   $thisAttrib == "translateZ")
+											{//do translate
+												if(jcIsRoot($each))
+													{//write out translate
+														//write attrib name
+														fprint $myFileId (" " + $thisAttrib);
+														$myValue = eval("getAttr " + $each + "." + $thisAttrib);
+
+														//write value
+														fprint $myFileId (" " + $myValue);
+
+													}//write out translate
+											}//do translate
+										else
+											{//do this attribute
+												//write attrib name
+												fprint $myFileId (" " + $thisAttrib);										$myValue = eval("getAttr " + $each + "." + $thisAttrib);
+												$myValue = eval("getAttr " + $each + "." + $thisAttrib);
+
+												//write value
+												fprint $myFileId (" " + $myValue);
+											}//do this attribute
+									}//do baked
+								else
+									{//do relative
+										//write attrib name
+										fprint $myFileId (" " + $thisAttrib);										$myValue = eval("getAttr " + $each + "." + $thisAttrib);
+
+										//save value
+										$myValue = eval("getAttr " + $each + "." + $thisAttrib);
+
+										//write value
+										fprint $myFileId (" " + $myValue);
+
+									}//do relative
+							}//Do Each attrib
+
+						//Write End of Object Tag
+						fprint $myFileId " <objEnd>\n";				
+
+						//update progress count
+						$progressCount++;
+
+					}//Do each object in list
+
+					//Close (and save) the open file
+					fclose $myFileId;
+				}//write out pose file
+
+			else if ($fileType == "saveAnimation" || $fileType == "saveAnimationRange")
+				{//write out animation file
+					//Determine Start/End frames
+					if($fileType == "saveAnimation")
+						{//do all keys
+							if($valueType == "bakeKeyValue")
+								{//use playback range
+									$firstKey = `playbackOptions -query -minTime`;
+									$lastKey = `playbackOptions -query -maxTime`;
+								}//use playback range
+
+							else
+								{//find first and last keys for each object
+									//find the first and last key in the list of objects
+									$firstKey = `findKeyframe -which "first" $myItems[0]`;
+									$lastKey = `findKeyframe -which "last" $myItems[0]`;
+
+									for($each in $myItems)
+										{//search list
+											$tempFirstKey = `findKeyframe -which "first" $each`;
+											$tempLastKey = `findKeyframe -which "last" $each`;
+
+											if($tempFirstKey < $firstKey)
+												{//set new first key
+													$firstKey = $tempFirstKey;
+												}//set new first key
+											if($tempLastKey > $lastKey)
+												{//set new last key
+													$lastKey = $tempLastKey;
+												}//set new last key
+										}//search list
+									//get first and last keyframes
+								}//find first and last keys for each object
+						}//do all keys
+					else
+						{//use range
+							$firstKey = $rangeStart;
+							$lastKey = $rangeEnd;
+							if($absFrame == 0)
+								{//use relative frame numbers
+									$minusOffset = $rangeStart;
+								}//use relative frame numbers
+							else
+								{//use absolute frame numbers
+									$minusOffSet = 0;
+								}//use absolute frame numbers
+
+						}//use range
+
+
+				//go through each frame in the range
+				for($currentFrame = ($firstKey); $currentFrame <= ($lastKey); $currentFrame++)
+					{//loop through each frame
+						//Determine progress amount
+						$percent = (((float)$currentFrame)/$lastKey);
+						$progressAmount = ($percent*100);
+
+						//update progress window
+						if(`progressWindow -query -isCancelled`)
+							{//warning
+								warning ("Not all items were saved! \(user cancelled\)\n");
+								break;
+							}//warning
+						progressWindow
+							-edit
+							-progress $progressAmount
+							-status ("Saving: " + $progressAmount + "%");
+
+						//Setup main counter for preFileArray 
+						//(this just keeps our place in the array if we are baking the joint rotations)
+						$preFileCount = 0;
+
+						//Loop through all objects in the myItems array
+						for($each in $myItems)
+							{//do each object
+								if($valueType == "bakeKeyValue")
+									{//make sure object is a joint
+										if(!(`objectType -isType "joint" $each`))
+											{//no joint, skip
+												warning ($each + " is not a Joint, skipping...\n");
+												continue;
+											}//no joint, skip
+									}//make sure object is a joint
+
+								//write out object name
+								$preFileArray[$preFileCount] = ("\nObjName: " + $each);
+								$preFileCount++;
+
+								//write out rotation order
+								$preFileArray[$preFileCount] = ("\nrotateOrder: " + `getAttr (($each + ".rotateOrder"))`);
+								$preFileCount++;
+
+								//grab list of attributes for current item
+								$myAttribList = eval("listAttr -keyable -scalar -visible " + $each);
+									//loop through each attribute
+									for($thisAttrib in $myAttribList)
+										{//loop through each attribute
+											//build name.attribute string for ease of use later
+											$currentFullName = ($each + "." + $thisAttrib);
+
+							//set this up incase we ever want to do something on a whole range of keys at once.
+							//right now however it will only act on 1 frame at a time.  Its always good to leave
+							//options for yourself later.
+							$currentRange = ($currentFrame + ":" + $currentFrame);
+
+							if($valueType == "relKeyValue")
+								{//do relative
+									//Make sure object.attrib is indeed animated
+									if(`connectionInfo -isDestination $currentFullName`)
+										{//It is animated
+											//Determine what is animating this attribute (the driver)
+											$animationDriver = `connectionInfo -sourceFromDestination $currentFullName`;
+
+											//Break it up on the "."
+											$numTokens = `tokenize $animationDriver "." $driverTemp`;
+
+											//Save the driver name only, back to the $animationDriver
+											$animationDriver = $driverTemp[0];
+
+											//make sure that the driver is an animation curve
+											$myNodeType = `nodeType $animationDriver`;
+
+											if(`isAnimCurve $animationDriver`)
+												{//good driver
+													//check if there is a keyframe at this time
+													if(`keyframe -time $currentRange  -query -keyframeCount $animationDriver`)
+														{//record info
+															//record key time
+															$keyVals = ($keyVals + " " + ($currentFrame-$minusOffset));
+
+															//save value
+															$valTemp = `keyframe -time $currentRange -query -a -vc $currentFullName`;
+															$keyVals = ($keyVals + " " + $valTemp[0]);					
+
+															//inTanTypes
+															$inTanTypes = ($inTanTypes + " " + ($currentFrame - $minusOffset));
+															$inTanTypesTemp = `keyTangent -time $currentRange -query -inTangentType $currentFullName`;
+															$inTanTypes = ($inTanTypes + " " + $inTanTypesTemp[0]);
+
+															//outTanTypes
+															$outTanTypes = ($outTanTypes + " " + ($currentFrame - $minusOffset));
+															$outTanTypesTemp = `keyTangent -time $currentRange -query -outTangentType $currentFullName`;
+															$outTanTypes = ($outTanTypes + " " + $outTanTypesTemp[0]);
+
+															//inTanWeights
+															$inTanWeights = ($inTanWeights + " " + ($currentFrame - $minusOffset));
+															$inTanWeightsTemp = `keyTangent -time $currentRange -query -inWeight $currentFullName`;
+															$inTanWeights = ($inTanWeights + " " + $inTanWeightsTemp[0]);
+
+															//outTanWeights
+															$outTanWeights = ($outTanWeights + " " + ($currentFrame - $minusOffset));
+															$outTanWeightsTemp = `keyTangent -time $currentRange -query -outWeight $currentFullName`;
+															$outTanWeights = ($outTanWeights + " " + $outTanWeightsTemp[0]);
+
+															//inTanAngles
+															$inTanAngles = ($inTanAngles + " " + ($currentFrame - $minusOffset));
+															$inTanAnglesTemp = `keyTangent -time $currentRange -query -inAngle $currentFullName`;
+															$inTanAngles = ($inTanAngles + " " + $inTanAnglesTemp[0]);
+
+															//outTanAngles
+															$outTanAngles = ($outTanAngles + " " + ($currentFrame - $minusOffset));
+															$outTanAnglesTemp = `keyTangent -time $currentRange -query -outAngle $currentFullName`;
+															$outTanAngles = ($outTanAngles + " " + $outTanAnglesTemp[0]);
+
+
+														}//record info
+													else
+														{//no key
+															//if there is no key on this frame, put a "*" instead
+
+															//record key time
+															$keyVals = ($keyVals + " *");
+															$inTanTypes = ($inTanTypes + " *");
+															$outTanTypes = ($outTanTypes + " *");
+															$inTanWeights = ($inTanWeights + " *");
+															$outTanWeights = ($outTanWeights + " *");
+															$inTanAngles = ($inTanAngles + " *");
+															$outTanAngles = ($outTanAngles + " *");
+
+															//record key value
+															$keyVals = ($keyVals + " *");
+															$inTanTypes = ($inTanTypes + " *");
+															$outTanTypes = ($outTanTypes + " *");
+															$inTanWeights = ($inTanWeights + " *");
+															$outTanWeights = ($outTanWeights + " *");
+															$inTanAngles = ($inTanAngles + " *");
+															$outTanAngles = ($outTanAngles + " *");
+
+														}//no key
+											}//good driver
+										else
+											{//driver not an animation curve.. skip
+												warning ("Driver: " + $animationDriver + " is not an animCurveTL node..  skipping\n");
+												continue;
+											}//driver not an animation curve.. skip
+
+									}//it is animated
+								else
+									{//no animation.. skip
+										warning ($currentFullName + " does not seem to be animated... skipping...\n");
+									}//no animation.. skip
+
+								}//do relative
+
+						//Do the bake style
+						else if($valueType == "bakeKeyValue")
+								{//do baked
+									//update time
+									currentTime $currentFrame;
+
+									//determine if this joint is a root joint
+									//if so get translation as well as rotation								
+									if($thisAttrib == "translateX" ||
+									   $thisAttrib == "translateY" ||
+									   $thisAttrib == "translateZ")
+										{//do translate
+											if(jcIsRoot($each))
+												{//write out translate
+													//write attrib name
+													$keyVals = ($keyVals + " " + ($currentFrame-$minusOffset));
+													$tempVal = getAbsLoc($each, $thisAttrib);
+													$keyVals = ($keyVals + " " + $tempVal);
+												}//write out translate
+											else
+												{//skip this attrib
+													continue;
+												}//skip this attrib
+										}//do translate
+									else
+										{//do other attributes
+											$keyVals = ($keyVals + " " + ($currentFrame-$minusOffset));
+											$tempVal = eval("getAttr " + $each + "." + $thisAttrib);
+											$keyVals = ($keyVals + " " + $tempVal);
+										}//do other attributes
+
+
+									//fill in "*" for the tangents (since we are keying every frame)
+									$inTanTypes = ($inTanTypes + " *");
+									$outTanTypes = ($outTanTypes + " *");
+									$inTanWeights = ($inTanWeights + " *");
+									$outTanWeights = ($outTanWeights + " *");
+									$inTanAngles = ($inTanAngles + " *");
+									$outTanAngles = ($outTanAngles + " *");
+
+									//record key value
+									$inTanTypes = ($inTanTypes + " *");
+									$outTanTypes = ($outTanTypes + " *");
+									$inTanWeights = ($inTanWeights + " *");
+									$outTanWeights = ($outTanWeights + " *");
+									$inTanAngles = ($inTanAngles + " *");
+									$outTanAngles = ($outTanAngles + " *");
+
+								}//do baked
+
+							//Now that all of the needed values have been stored for this key
+							//write out object info to the file
+
+							//KeyVal
+							//check to see if keyvals is empty
+							if(`size $keyVals` !=0)
+								{//write it out
+									//store info in the preFileArray
+									$preFileArray[$preFileCount] = ("\nAttribName: " + $thisAttrib);
+									//update the counter for each line in the array
+									//inc. the counter for each element in the array
+									$preFileCount++;
+
+									//check if this is the first time through the array
+									$tempSize = `size $preFileArray[$preFileCount]`;
+									if($tempSize != 0)
+										{//make substring
+											//if its not he first time through, only copy the new parts in
+											//(skip the \nkeyVal: part)
+											$tempString = `substring $preFileArray[$preFileCount] 9 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											//clear the tempString
+											$tempString = "";
+										}//set to ""
+									//copy whats in the array and add new items, then store it back
+									$preFileArray[$preFileCount] = ("\nkeyVal:" + $tempString + $keyVals);
+									$preFileCount++;
+
+									$tempSize = `size $preFileArray[$preFileCount]`;							
+									if($tempSize != 0)
+										{//make substring
+											$tempString = `substring $preFileArray[$preFileCount] 13 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											$tempString = "";
+										}//set to ""
+									$preFileArray[$preFileCount] = ("\ninTanTypes:" + $tempString + $inTanTypes);
+									$preFileCount++;
+
+									$tempSize = `size $preFileArray[$preFileCount]`;
+									if($tempSize != 0)
+										{//make substring
+											$tempString = `substring $preFileArray[$preFileCount] 14 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											$tempString = "";
+										}//set to ""
+									$preFileArray[$preFileCount] = ("\noutTanTypes:" + $tempString + $outTanTypes);
+									$preFileCount++;
+
+									$tempSize = `size $preFileArray[$preFileCount]`;
+									if($tempSize != 0)
+										{//make substring
+											$tempString = `substring $preFileArray[$preFileCount] 15 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											$tempString = "";
+										}//set to ""
+									$preFileArray[$preFileCount] = ("\ninTanWeights:" + $tempString + $inTanWeights);
+									$preFileCount++;
+
+									$tempSize = `size $preFileArray[$preFileCount]`;
+									if($tempSize != 0)
+										{//make substring
+											$tempString = `substring $preFileArray[$preFileCount] 16 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											$tempString = "";
+										}//set to ""
+									$preFileArray[$preFileCount] = ("\noutTanWeights:" + $tempString + $outTanWeights);
+									$preFileCount++;
+
+									$tempSize = `size $preFileArray[$preFileCount]`;
+									if($tempSize != 0)
+										{//make substring
+											$tempString = `substring $preFileArray[$preFileCount] 14 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											$tempString = "";
+										}//set to ""
+									$preFileArray[$preFileCount] = ("\ninTanAngles:" + $tempString + $inTanAngles);
+									$preFileCount++;
+
+									$tempSize = `size $preFileArray[$preFileCount]`;
+									if($tempSize != 0)
+										{//make substring
+											$tempString = `substring $preFileArray[$preFileCount] 15 $tempSize`;
+										}//make substring
+									else
+										{//set to ""
+											$tempString = "";
+										}//set to ""
+
+									$preFileArray[$preFileCount] = ("\noutTanAngles:" + $tempString + $outTanAngles);
+									$preFileCount++;
+								}//write it out
+
+							//clear list for next attribute
+							$keyVals = "";
+							$inTanTypes = "";
+							$outTanTypes = "";
+							$inTanWeights = "";
+							$outTanWeights = "";
+							$inTanAngles = "";
+							$outTanAngles = "";
+
+						}//loop through each attribute
+
+						}//do each object
+
+						}//loop through each frame
+
+				//all done, write the file to disk
+
+				//write header
+				print ("All Done! Writing file...\n");
+				fprint $myFileId "ANIMATION\n";
+
+				//Write out value type (absolute or relative)
+				if($valueType == "bakeKeyValue")
+					{//do absolute
+						fprint $myFileId "valueType: BAKED\n";
+					}//do absolute
+				else if ($valueType == "relKeyValue")
+					{//do relative
+						fprint $myFileId "valueType: RELATIVE\n";
+					}//do relative
+				else
+					{//unknown type
+						error ($valueType + " is an unknown value type!\n");
+					}//unknown type
+
+				//loop though the array and write each line to the file
+				for($myCount = 0; $myCount < `size $preFileArray`; $myCount++)
+					{//write out the array
+						fprint $myFileId $preFileArray[$myCount];
+					}//write out the array
+
+				//close the file
+				fclose $myFileId;
+				}//write out animation file
+			else
+				{//unknown type to this function
+					//this type of error checking will help you later if you end up reusing this function
+					//in another script
+					//close progress window
+					progressWindow -endProgress;
+					//issue error
+					error ("jcSaveAnimFile does not know how to handle a file of type \"" + $fileType + "\"\n");
+				}//unknown type to this function
+			//close progress window
+			progressWindow -endProgress;
+
+		}//save the file
+}//jcSaveAnimFile
+
+/*********************************************************************************
+jcRemoveFromSourceList
+Arguments:
+	string $myFileInfo[] - this is the main array that holds all of the currently
+			       loaded animation or pose information.  We will need to
+			       pull data from it and keep it updated when we remove
+			       items from the source list.
+	string $myTargets[] - this array holds all of the names of the targets that the
+			      animation/pose info will be applied to later.  These custom
+			      targets will need to be removed from the list as well when
+			      their source is removed
+
+	string $myList	- this is the name of the textScrollList that holds the names of the
+			  source objects.
+
+	string $myTargetList - this is the name of the textScrollList that holds the target
+			       names
+	string $thisTargetArray - the array that holds all of the targes for the source objects
+
+Returns:
+	string[] - this will return the updated main array with the proper info removed
+		   from it.
+
+Notes:
+	none
+**********************************************************************************/
+global proc string[] jcRemoveFromSourceList(string $myFileInfo[], string $myTargets[], string $myList, string $myTargetList, string $thisTargetArray[])
+{//jcRemoveFromSourceList
+
+	//declare our local vars
+	int $mySelection[];
+	int $i;
+	int $objectIndex;
+	int $nextObjectIndex;
+	int $delCount;
+	string $tempArray[];
+	string $targetTempArray[];
+	int $myIndex;
+	string $headerFull[];
+	string $myHeader;
+	string $tempBuffer[];
+
+	//store header for easy access
+	tokenize($myFileInfo[0], $headerFull);
+	$myHeader = $headerFull[0];
+
+	//Query the textScrollList to see what is selected
+	$mySelection = `textScrollList -q -selectIndexedItem $myList`; 
+	
+	//Remove each selected item
+
+	for($i = 0; $i < `size($mySelection)`; $i++)
+		{ //remove each item
+		//Edit the textScrollList and remove selected
+			textScrollList
+			-edit
+			-removeIndexedItem $mySelection[$i]
+			loadSourceObjectsTextList;
+
+		//flag array entry for removal later
+			if($myHeader == "POSE")
+				{//remove from pose list
+					$myFileInfo[$mySelection[$i]+1] = "*DEL*";
+				}//remove from pose list
+
+			else if($myHeader == "ANIMATION")
+				{//remove from animation list
+					$objectIndex = $headerFull[$mySelection[$i]];
+					if($headerFull[$mySelection[$i]+1] != "")
+						{//set nextObjectIndex
+							$nextObjectIndex = $headerFull[$mySelection[$i]+1];
+						}//set nextObjectIndex
+					else
+						{//use size instead
+							$nextObjectIndex = `size $myFileInfo`;
+						}//use size instead
+
+					for($delCount = $objectIndex; $delCount < $nextObjectIndex; $delCount++)
+						{//flag objects for delete
+							$myFileInfo[$delCount] = "*DEL*";
+						}//flag objects for delete
+				}//remove from animation list
+
+
+		} //remove each item
+	
+	//copy header
+	$tempArray[0] = $myFileInfo[0];
+	
+	//copy valueType
+	$tempArray[1] = $myFileInfo[1];
+
+	//clear the first entry
+	//JAC - clear this all out maybe?
+	$targetTempArray[0] = "";
+
+	//copy good (non-*DEL*) items back to the tempArray
+	for($i = 2; $i < `size($myFileInfo)`; $i++)
+		{//copy "good" items and their targets
+			if($myFileInfo[$i] != "*DEL*")
+				{//copy
+					$tempArray[`size $tempArray`] = $myFileInfo[$i]; 
+
+					if(`size $myTargets` > 0)
+						{//do targets
+							$targetTempArray[`size $targetTempArray`]= $myTargets[$i];
+						}//do targets
+				}//copy
+		}//copy "good" items and their targets
+
+	//clear out the main target array and copy the updated list to it
+	clear $thisTargetArray;
+	$thisTargetArray = $targetTempArray;
+
+	//check to see if all items from the Source objects list are gone
+	if(`textScrollList -query -numberOfItems $myList` == 0)
+		{//clear lists
+			textScrollList -edit -removeAll $myTargetList;
+		}//clear lists
+
+	//reindex the objectIndex
+	if($myHeader == "ANIMATION")
+		{//reindex
+			//rebuild header for reindex
+			$tempArray[0] = "ANIMATION";
+
+			//search for objects
+			for($n = 1; $n < `size $tempArray`; $n++)
+				{//search
+					tokenize($tempArray[$n], $tempBuffer);
+					if($tempBuffer[0] == "ObjName:")
+						{//record index
+							$tempArray[0] = ($tempArray[0] + " " + $n);
+						}//record index
+				}//search
+		}//reindex
+
+	//"save" the final updated array back to the main proc
+	return $tempArray;
+
+}//jcRemoveFromSourceList
+
+/*********************************************************************************
+jcLoadAnimFile
+Arguments:
+	string $myList - this is the name of the textScrollList to
+			 load the object names into
+			 (if this is NONE, no list will be used)
+	srting $forcePath - if this value is not "" then it will be
+			    used instead of asking for a path from the user
+Returns:
+	string[] - returns the poseFileArray.  This contains the objectNames,
+		   attributes, and values from the loaded file.
+
+Notes:
+	File format for a POSE file is as follows:
+	Header
+	valueType: valueType
+	ObjectName AttributeName AttributeValue <objEnd>
+	ObjectName AttributeName AttributeValue <objEnd>
+	....eof
+
+	File format for an ANIMATION file is as follows:
+	Header\n
+	valueType: valueType
+
+	ObjName: nameOfObject\n
+	AttribName: nameOfAttribute\n
+	keyVal: frameNumber frameValue\n  (if there is no key for that frame the values are replaced with a "*")
+	inTanTypes: frameNumber frameValue\n  (if there is no key for that frame the values are replaced with a "*")
+	outTanTypes: frameNumber frameValue\n (if there is no key for that frame the values are replaced with a "*")
+	inTanWeights: frameNumber frameValue\n (if there is no key for that frame the values are replaced with a "*")
+	outTanWeights: frameNumber frameValue\n (if there is no key for that frame the values are replaced with a "*")
+	inTanAngles: frameNumber frameValue\n  (if there is no key for that frame the values are replaced with a "*")
+	outTanAngles: frameNumber frameValue\n  (if there is no key for that frame the values are replaced with a "*")
+	AttribName: nameOfAttribute\n
+	...
+	ObjName: nameOfObject\n
+	...
+	...eof
+**********************************************************************************/
+global proc string[] jcLoadAnimFile(string $myList, string $forcePath)
+{//jcLoadAnimFile
+
+	//Delclare our local vars
+        string $fileArray[];
+	int $myFileId;
+	string $myPath;
+	string $prevWord;
+	string $myHeader;
+	string $myValueType;
+	string $objString = "";
+
+	string $tempBuffer[];
+	string $myTempString;
+
+	//Open a file dialog to find the pose file to load
+	//Only show the .jcp files in the folder
+	if($forcePath == "")
+		{//no forced path		
+			$myPath = `fileDialog -directoryMask "*.jcp; *.jca"`;
+		}//no forced path
+	else
+		{//path provided
+			$myPath = $forcePath;
+		}//path provided
+
+	//Display to the user
+	print ("Current Path: " + $myPath + "\n");
+
+	//if a list was provided, clear the list first
+	if($myList != "")
+		{//clear the list
+			//clear textScrollList
+			textScrollList -edit -removeAll $myList;
+		}//clear the list
+
+	//Read in the file as long as a path was returned
+	if($myPath != "")
+		{//Read File
+			//Make sure the path is valid
+			if(!`filetest -f $myPath`)
+				{//bad file
+					error($myPath + " was not found, or could not be accessed.\n");
+				}//bad file
+			//Open file for read only and grab id
+			$myFileId = `fopen $myPath "r"`;
+
+			//Read file into $fileArray[]
+			//Clear Array to make sure that we start fresh
+			clear $fileArray;
+
+			//Get header
+			$myHeader = `fgetword $myFileId`;
+			print ("myHeader: " + $myHeader + "\n");
+
+			//Get valueType
+			//get descriptor
+			$myValueType = `fgetword $myFileId`;
+			print ("myValueType: " + $myValueType + "\n");
+
+			//get actual type
+			$myValueType = `fgetword $myFileId`;
+			print ("myValueType: " + $myValueType + "\n");
+
+			//check to make sure that $myHeader has something in it
+			//If it doesn't, its a bad file
+			if(size($myHeader) == 0 )
+				{//Bad file
+					error "Empty File!";
+				}//Bad File
+
+			if($myHeader == "POSE")
+				{//load a POSE file
+					//End the Header line and start reading objects
+					$fileArray[0] = $myHeader;
+					$fileArray[1] = $myValueType;
+
+					//get first objectName
+					$objString = `fgetword $myFileId`;
+
+					//Add it to the list
+					if($myList != "")
+						{//do not edit list
+							textScrollList -e -append $objString $myList;
+						}//do not edit list
+
+					//Loop through each word in the file until "endOfFile" is reached
+					while(!`feof $myFileId`)
+						{//Store All file info into array
+							//get next word from file
+							$word = `fgetword $myFileId`;
+
+							if($word != "<objEnd>")
+								{//Save attributes
+									$objString = ($objString + " " + $word);
+								}//Save attributes
+							else
+								{//Next Object
+									//store finished object in array
+									$fileArray[`size $fileArray`] = $objString;
+
+									//Get next object name
+									$word = `fgetword $myFileId`;
+
+									if($myList != "")
+										{//do not edit list
+											//add object to textScrollList
+											textScrollList -e -append $word $myList;
+										}//do not edit list
+
+									//clear string
+									$objString = "";
+
+									//add new objectName to the new objString
+									$objString = $word;
+
+								}//Next Object
+					}//Store all file info into array
+
+					//We are now done with the file.  Close it.
+					fclose $myFileId;
+				}//Load a POSE file
+
+			else if($myHeader == "ANIMATION")
+				{//Load animation file
+					print ("Loading Animation...\n");
+					//load header
+					$fileArray[0] = $myHeader;
+
+					//load valueType
+					$fileArray[1] = $myValueType;
+
+					//read each line of the file.  If its an object name, add it to the list
+					$animFileCount = 2;
+
+					while(!`feof $myFileId`)
+						{//read in animation file
+							//read in each line
+							$myTempString = `fgetline $myFileId`;
+
+							//break it down and check for "ObjName"
+							$numTokens = tokenize($myTempString, $tempBuffer);
+
+							//check to see if its an Object Name line
+							if($tempBuffer[0] == "ObjName:")
+								{//store object name
+									//Update the list
+									if($myList != "")
+										{//edit list
+											textScrollList -edit -append $tempBuffer[1] $myList;
+										}//edit list
+									//update the count to the next object name
+									//we will use this count later on to do custom mapping
+									$fileArray[0] = ($fileArray[0]  + " " + $animFileCount);
+								}//store object name
+
+							//store the info into the array
+							//Strip off newLine
+							tokenize($myTempString, "\n", $tempBuffer);
+
+							//store into fileArray
+							$fileArray[`size $fileArray`] = $tempBuffer[0];
+
+							//Inc. the counter
+							$animFileCount++;
+
+						}//read in animation
+					print "Done...\n";
+				}//Load animation file
+			}//Read File
+		else
+			{//No file Path
+				error "The File Path was empty!\n";
+			}//No File Path
+	
+//return the fileArray to the caller
+return $fileArray;
+
+}//jcLoadAnimFile
+
+/***************************************************************
+jcGetValueType
+Arguments: string $myFileInfo[] - the array the holds the currently loaded file info
+
+Returns: string - returns the first word in $myFileInfo[1]
+		  (usually "BAKED" or "RELATIVE"
+
+Notes:
+	none			
+****************************************************************/
+global proc string jcGetValueType(string $myFileInfo[])
+{//jcGetValueType
+
+	//Declare our local vars
+	string $tempString;
+	string $tempBuffer[];
+
+	//split up the first line of the animation info
+	$numTokens = tokenize($myFileInfo[1], $tempBuffer);
+
+	//Grab the first word and check it
+	return $tempBuffer[0];
+
+}//jcGetValueType
+
+/***************************************************************
+jcGetFileType()
+Arguments: string $myFileInfo[] - The array that holds the currently loaded file info
+
+Returns: string - this returns the first word in $myFileInfo[0]
+		  Usually "ANIMATION" or "POSE"
+		
+Notes:
+	This is simply a handy little proc to grab the file type
+****************************************************************/
+global proc string jcGetFileType(string $myFileInfo[])
+{//jcGetFileType
+
+	//Declare our local vars
+	string $tempString;
+	string $tempBuffer[];
+
+	//split up the first line of the animation info
+	$numTokens = tokenize($myFileInfo[0], $tempBuffer);
+
+	//Grab the first word and check it
+	return $tempBuffer[0];
+
+}//jcGetFileType
+
+
+/*************************************************************************************
+jcApplyAnim()
+
+Arguments:
+	string $myAnimInfo[] - this is the array that holds the animation info 
+			       from the file to be parsed
+
+	int $autoLoad - 0 or 1, 0 == Auto map the objects
+				1 == use custom mapping
+	
+	string $onError - what to do if part of the auto load fails.  This has
+			  no effect if $autoLoad == 0
+
+	int $doScale - 0 or 1, Whether to adjust for scale or not.
+
+	string $offsetType - how to handle the offset: "applyToCurrentFrame" or "applyToOffset"
+
+	int $myOffset - how many frames to shift the animation before applying it
+
+Returns:
+	none
+
+Notes:
+	This proc does the actual "paste" of the key info to the targets
+************************************************************************************/
+global proc jcApplyAnim(string $myAnimInfo[], string $myTargets[], int $autoLoad, string $onError, int $doScale, string $offsetType, int $myOffset)
+{//jcApplyAnim
+	
+	//Decalare our local vars
+	string $myCurrentObject[];
+	int $numTokens;
+	string $mySource;
+	string $myFullSource;
+	string $targets[];
+	string $myTarget;
+	string $tempBuffer[];
+	string $indexList[];
+	int $i;
+	int $currentIndex;
+
+	//used to adapt for scale
+	float $ratioList[];
+	float $sourceFirst[];
+	float $targetFirst[];
+
+	float $percent = 0.0;
+	int $progressAmount = 0;
+
+	print "Starting Copy...\n";
+	//open progress window
+	progressWindow
+		-title "Applying Frames"
+		-progress $progressAmount
+		-status "Setting Pose: 0%"
+		-isInterruptable true;
+
+	//Figure out which type of file this is:
+	if(jcGetFileType($myAnimInfo) == "POSE")
+		{//POSE file
+			//loop through array and apply pose
+			//start at 2 because 0 is the header and 1 is the valueType
+			for($i = 2; $i < `size($myAnimInfo)`; $i++)
+				{//step through objects
+					//update progress
+					$precent = (((float)$i)/(`size $myAnimInfo`));
+					$progressAmount = ($percent * 100);
+
+					//update progress window
+					if(`progressWindow -query -isCancelled`) 
+						{//warning
+							warning ("Not all keys were set! \(user cancelled\)\n");
+							break;
+						}//warning
+					progressWindow
+						-edit
+						-progress $progressAmount
+						-status ("Setting Pose: " + $progressAmount + "%");
+
+					//read in each line of array (each object) and tokenize
+					$numTokens = tokenize($myAnimInfo[$i], $myCurrentObject);
+
+					//set up source object
+					$mySource = $myCurrentObject[0];
+
+					if($autoLoad == 1)
+						{//autoLoad file
+
+							//setup target object
+							$targets[0] = $myCurrentObject[0];
+							$myTarget = $myCurrentObject[0];
+
+							//check for object
+							$isObject = `objExists $myTarget`;
+
+							//Take proper action based on $onError result
+							if($isObject)
+								{//object exists, apply the attributes
+									jcApplyAttribs($i, $myAnimInfo, $targets);
+								}//object exists, apply the attributes
+
+							else if($onError == "onErrorContinue")
+								{//skip this one and move on
+									continue;	
+								}//skip this one and move on
+
+							else if($onError == "onErrorCancel")
+								{//stop on error
+									error ($mySource + " does not seem to exist, application stopped\n");									
+								}//stop on error
+
+							else if($onError == "onErrorAsk")
+								{//ask to continue or move on
+									$onErrorDialog = `confirmDialog -title "Error Finding Object"
+										-message ($mySource + " was not found.  What would you like to do?")
+										-button "Continue"
+										-button "Cancel"
+										-dismissString "Cancel"
+										-defaultButton "Continue"`;
+
+									//process response
+									if($onErrorDialog == "Continue")
+										{//do next object
+											continue;
+										}//do next object
+									else
+										{//stop
+											error "User Cancelled Operation";
+										}//stop
+								}//ask to continue or move on
+
+
+						}//autoLoad file
+					else
+						{//Use custom mapping
+							//get list of targets and tokenize							
+							$numTokens = tokenize($myTargets[$i-1], $targets);
+							jcApplyAttribs($i, $myAnimInfo, $targets);
+						}//use custom mapping
+				}//step through objects
+			//close progress window
+			progressWindow -endProgress;
+
+		}//POSE file
+	else if (jcGetFileType($myAnimInfo) == "ANIMATION")
+		{//Animation file
+			//Get objectName index
+			tokenize($myAnimInfo[0], $indexList);
+
+			//add final index to index list
+			$indexList[(`size $indexList`)] = `size $myAnimInfo`;
+			
+			//step through each object
+			for($i = 1; $i < ((`size $indexList`)-1); $i++)
+				{//do each object
+				//Determine Progress Amount
+				$percent = (((float)$i)/(`size $indexList`));
+				$progressAmount = ($percent * 100);
+				
+				//update progress window
+				if(`progressWindow -query -isCancelled`)
+					{//warning
+						warning("Not all keys were set! \(user cancelled\)\n");
+						break;
+					}//warning
+				progressWindow
+					-edit
+					-progress $progressAmount
+					-status ("Applying Animation: " + $progressAmount + "%");
+
+					//store the current index					
+					$currentIndex = $indexList[$i];
+
+					//clear $mySource
+					$mySource = "";
+					
+					//setup source object name					
+					tokenize ($myAnimInfo[$currentIndex], $tempBuffer);
+					$mySource = $tempBuffer[1];
+					
+					//setup targets
+					if($autoLoad ==1)
+						{//autoload file
+							//target same as source
+							clear $targets;
+							$targets[0] = $mySource;
+							$myTarget = $mySource;
+
+						//check for object
+							$isObject = `objExists $myTarget`;
+
+							//Take proper action based on $onError result
+							if($isObject)
+								{//object exists, apply the attributes
+									jcApplyKeys($myAnimInfo, $targets, $indexList, $i, $mySource, $currentIndex, $offsetType, $myOffset, $doScale);
+								}//object exists, apply the attributes
+
+							else if($onError == "onErrorContinue")
+								{//skip this one and move on
+									continue;	
+								}//skip this one and move on
+
+							else if($onError == "onErrorCancel")
+								{//stop on error
+									error ($mySource + " does not seem to exist, application stopped\n");									
+								}//stop on error
+
+							else if($onError == "onErrorAsk")
+								{//ask to continue or move on
+									$onErrorDialog = `confirmDialog -title "Error Finding Object"
+										-message ($mySource + " was not found.  What would you like to do?")
+										-button "Continue"
+										-button "Cancel"
+										-dismissString "Cancel"
+										-defaultButton "Continue"`;
+
+									//process response
+									if($onErrorDialog == "Continue")
+										{//do next object
+											continue;
+										}//do next object
+									else
+										{//stop
+											error "User Cancelled Operation";
+										}//stop
+								}//ask to continue or move on
+
+						}//autoload file
+					else
+						{//use custom mapping
+							tokenize($myTargets[$i], $targets);	
+							jcApplyKeys($myAnimInfo, $targets, $indexList, $i, $mySource, $currentIndex, $offsetType, $myOffset, $doScale);
+						}//use custom mapping
+
+				}//do each object
+			//close progress window
+			progressWindow -endProgress;
+		}//Animation file
+	else
+		{//unknown file type
+
+			error ("jcApplyAnim cannot handle a file of type: " + jcGetFileType($myAnimInfo) + "\n");
+		}//unknown file type
+
+	print "Done...\n";
+}//jcApplyAnim
+
+
+/*************************************************************************************
+jcUpdateTargetList()
+
+Arguments:
+	string $mySourceList - this is the name of the Source Objects List
+	string $myTargetList - this is the name of the Target Objects List
+	string $myMappingArray[] - this is the array that holds the targets 
+				   for the source objects
+Returns:
+	none
+
+Notes:
+	This will fill the custom mapping Target List with the target objects assigned
+	to the currently selected Source Object
+*************************************************************************************/
+
+global proc jcUpdateTargetList(string $mySourceList, string $myTargetList, string $myMappingArray[])
+{//jcUpdateTargetList
+
+	//Declare local vars
+	string $myTokens[];
+	int $numTokens;
+	int $myIndex[];
+
+	//clear target list
+	textScrollList -edit -removeAll $myTargetList;
+
+	//get index of selected object
+        $myIndex = `textScrollList -query -selectIndexedItem $mySourceList`;
+
+	//Break apart target list for selected object
+		$numTokens = tokenize($myMappingArray[$myIndex[0]], $myTokens);
+
+	//make sure there are targets listed
+		if($numTokens > 0 && $myTokens[0] != "")
+			{//update list
+				for($each in $myTokens)
+					{//fill in list
+						textScrollList -edit -append $each $myTargetList;
+					}//fill in list
+			}//updateList
+		else
+			{//nothing to update
+				textScrollList -edit -append "No Targets" $myTargetList;
+			}//nothing to update
+
+}//jcUpdateTargetList
+
+/*************************************************************************************
+jcAddTargets()
+
+Arguments:
+	string $myNewTargets[] - list of names of objects to add to target list
+	string $myMappingArray[] - the array that holds the names of the targets
+	string $mySourceList - name of the textScrollList that holds the source object names
+	string $myTargetList - name of the textScrollList to add names to
+
+Returns:
+	string[] - returns the updated mapping array	
+
+Notes:
+	none
+************************************************************************************/
+global proc string[] jcAddTargets(string $myNewTargets[], string $myMappingArray[], string $mySourceList, string $myTargetList)
+{//jcAddTargets
+	int $myIndex[];
+	string $tempBuffer[];
+	int $numTokens;
+	int $isDupe = 0;
+
+	//get selected object index
+	$myIndex = `textScrollList -query -selectIndexedItem $mySourceList`;
+
+	//make sure we have a source selected
+	if(`size $myIndex` != 0)
+		{//source selected
+			//loop through list of selected objects
+			for($each in $myNewTargets)
+				{//add new targets
+					$tempList = $myMappingArray[$myIndex[0]];
+
+					//split up
+					$numTokens = tokenize($tempList, $tempBuffer);
+					//check for duplicates
+					for($item in $tempBuffer)
+						{//look for dupes
+							if($item == $each)
+								{//its a dupe
+									$isDupe = 1;
+								}//its a dupe
+						}//look for dupes
+
+					if($isDupe == 0)
+						{//unique
+							$tempList = ($tempList + " " + $each);
+							$myMappingArray[$myIndex[0]] = $tempList;
+						}//unique
+					else
+						{//reset
+							$isDupe = 0;
+						}//reset
+				}//add new targets	
+		}//source selected
+
+	
+	//return the updated custom mapping array
+	return $myMappingArray;
+	
+}//jcAddTargets
+
+/*************************************************************************************
+jcRemoveTargets()
+
+Arguments:
+	string $myMappingArray - the global array that holds the mapping info
+	string $mySourceList - name of the source objects textScrollList
+	string $myTargetLIst - name of the target objects textScrollList	
+		
+Returns:
+	the new mapping array
+
+Notes:
+	none
+***************************************************************************************/
+global proc string[] jcRemoveTargets(string $myMappingArray[], string $mySourceList, string $myTargetList)
+{//jcRemoveTargets
+
+	//decalare local vars
+	int $myIndex[];
+	string $myTargets[];
+	string $deleteMe[];
+	string $tempList;
+
+	//Get the proper indext to use from the $mySourceList textScrollList
+	$myIndex = `textScrollList -query -selectIndexedItem $mySourceList`;
+
+	//read in the targets	
+	$tempList = $myMappingArray[$myIndex[0]];
+
+	//Break down list into parts we can search
+	$numTokens = tokenize($myMappingArray[$myIndex[0]], $myTargets);
+	
+	//grab list of selected objects to delete
+	$deleteMe = `textScrollList -query -selectItem $myTargetList`;
+
+	//match up the strings and replace the deleted ones with "*DEL*"
+	for($each in $deleteMe)
+		{//loop through deleteMe
+			for($i = 0; $i < `size($myTargets)`; $i++)
+				{//loop through mapping array
+					if($each == $myTargets[$i])
+						{//flag for deletion
+							$myTargets[$i] = "*DEL*";
+						}//flag for deletion
+				}//loop through mapping array
+
+			//make new array and leave out the deleted ones
+			$myMappingArray[$myIndex[0]] = "";
+
+			//make new array
+			for($i = 0; $i < `size($myTargets)`; $i++)
+				{//make clean array
+					if($myTargets[$i] != "*DEL*")
+						{//write target back
+							$myMappingArray[$myIndex[0]] = ($myMappingArray[$myIndex[0]] + " " + $myTargets[$i]);
+						}//write target back
+				}//make clean array
+
+		}//loop through deleteMe
+	
+	return $myMappingArray;
+
+}//jcRemoveTargets
+
+/*************************************************************************************
+jcApplyAttribs()
+
+Arguments:
+	string $mySource - index of Source object
+	string $mySrouceArray[] - the main info array that holds all of the source info
+	string $myTargets[] - array that holds the target names for this object
+
+Returns:
+	none
+
+Notes:
+
+************************************************************************************/
+global proc jcApplyAttribs(int $mySourceIndex, string $mySourceArray[], string $myTargets[])
+{//jcApplyAttribs
+
+	//delcare local vars
+	string $currentObj[];
+	string $targetObj[];
+	int $numSourceTokens;
+	int $numTargetTokens;
+	string $attribCheck[];
+	string $myValType;
+	
+	//Get ValueType
+	$myValType = $mySourceArray[1];
+
+	//break down source and attributes
+	$numTokens = tokenize($mySourceArray[$mySourceIndex], $currentObj);
+
+	//loop through each target
+	for($each in $myTargets)
+		{//Apply attrbutes to targets
+			//check that the object has at lease one target
+			if($each == "")
+				{//no targets.. skip
+					warning ($currentObj[0] + " does not seem to have any targets! Skipping...\n");
+					continue;
+				}//no targest.. skip
+			else if(!`objExists $each`)
+				{//target doesn't exist.. skip
+					warning ($each + " does not seem to exist! Skipping...\n");
+					continue;
+				}//target doesn't exist.. skip
+			else
+				{//apply
+					for($i = 1; $i < `size($currentObj)`; $i+=2)
+						{//loop through each attribute ($i should be at the attribute name)
+							//check that attribute exists
+							clear $attribCheck;
+							$attribCheck = `listAttr -scalar -write -string $currentObj[$i] $each`;
+
+							//if the attribute is there then apply, else warn about it, but continue
+							if(`size $attribCheck` == 0)
+								{//attrib not found
+									warning ("Can't write to " + $each + "." + $currentObj[$i] + "... skipping...\n");
+								}//attrib not found
+							else
+								{//apply attribs
+									eval("setAttr " + $each + "." + $currentObj[$i] + " " + $currentObj[$i+1]);
+								}//apply attribs
+						}//loop through each attribute ($i should be at the attrbiute name)
+				}//apply
+		}//Apply attributes to targets
+}//jcApplyAttribs
+
+/**************************************************************************************************
+jcApplyKeys
+
+Arguments:
+	string $myAnimInfo[] - this is the main array that holds the loaded .jcp/.jca pose file
+	string $targets[] - the array of targets to apply the keys to
+	string $indexList[] - the list of positions in the myAnimInfo array of each object name
+	string $objIndex - the index of the object to work on
+	string $mySource - name of the source object to get the values from (in the array)
+	string $currentIndex - current index of the source object in the main info array
+	string $offsetType - how to handle the offset: "applyToCurrentFrame" or "applyToOffset"
+	int $myOffset - how many frames to shift the animation before applying
+
+Returns:
+	none
+
+Notes:
+	none
+****************************************************************************************************/
+global proc jcApplyKeys(string $myAnimInfo[], string $targets[], string $indexList[], int $objIndex, string $mySource, int $currentIndex, string $offsetType, int $myOffset, int $doScale)
+{//jcApplyKeys
+
+	string $myCurrentObject[];
+	int $numTokens;
+	string $myFullSource;
+	string $myTarget;
+	string $roBuffer[];
+	string $myValType;
+
+	int $fileEnd;
+	int $currentObjIndex;
+	int $currentAttIndex;
+	int $j;
+	int $numFrames;
+	int $tcount;
+	int $frameNumber;
+
+	//info for scale adapt
+	int $vectorCounter;
+	int $aCount;
+	float $myRatio;
+	string $tempBuffer[];
+	string $tempBuffer1[];
+	string $tempBuffer2[];
+	string $tempBuffer3[];
+	float $sourcePosList[];
+	float $targetPosList[];
+	float $sourceMag;
+	float $targetMag;
+	int $firstFrame = 1;
+	float $prevKeyVal = 0.0;
+
+	float $temp = 0.0;
+	float $temp1 = 0.0;
+
+	//key parts
+	float $keyVal;
+	string $myItt;
+	string $myOtt;
+	float $myItw;
+	float $myOtw;
+	float $myIta;
+	float $myOta;
+
+	//grab valType
+	$myValType = $myAnimInfo[1];
+
+	//grab rotation order
+	tokenize($myAnimInfo[$currentIndex+1], $roBuffer);
+
+	//set rotation order for each target
+	for($q=0; $q < (`size $targets`); $q++)
+		{//set rotation order on each object
+			//set rotation order for this object
+			eval("setAttr " + $targets[$q] + ".rotateOrder " +  $roBuffer[1]);
+		}//set rotation order on each object
+
+	//step through each attribute
+	for($j = $currentIndex+2; $j < ((int)$indexList[$objIndex+1]-1); $j+=8)
+		{//do each attribute
+
+			//clear $myFullSource
+			$myFullSource = $mySource;
+			
+			//reset firstFrame
+			$firstFrame= 1;
+
+			//get attribute name and add to source name
+			tokenize ($myAnimInfo[$j], $tempBuffer);
+			$myAttrib = $tempBuffer[1];
+			$myFullSource = ($myFullSource + "." + $tempBuffer[1]);
+
+			//get KeyVal and number of frames to look at ($j+1)
+			tokenize($myAnimInfo[$j+1], $tempBuffer);
+			$numFrames = ((`size $tempBuffer`) - 1);
+
+			for($x = 2; $x <= $numFrames; $x+=2)
+				{//do each frame
+					//is there a key on this frame?
+					if($tempBuffer[$x] != "*")
+						{//apply this key
+							$frameNumber = $tempBuffer[$x-1];
+							$keyVal	= $tempBuffer[$x];
+							if($firstFrame != 1)
+								{//get previous key value
+									$prevKeyVal = $tempBuffer[$x-2];
+								}//get previous key value
+							else
+								{//prevKeyVal
+									$prevKeyVal = $tempBuffer[$x];
+								}//prevKeyVal
+							if($myValType != "BAKED")
+								{//do tangents
+									//inTanTypes
+									tokenize ($myAnimInfo[$j+2], $tempBuffer1);
+									$myItt = $tempBuffer1[$x];
+
+									//outTanTypes
+									tokenize ($myAnimInfo[$j+3], $tempBuffer1);
+									$myOtt = $tempBuffer1[$x];
+
+									//inTanWeights
+									tokenize ($myAnimInfo[$j+4], $tempBuffer1);
+									$myItw = $tempBuffer1[$x];
+
+									//outTanWeights
+									tokenize ($myAnimInfo[$j+5], $tempBuffer1);
+									$myOtw = $tempBuffer1[$x];
+
+									//inTabAngles
+									tokenize ($myAnimInfo[$j+6], $tempBuffer1);
+									$myIta = $tempBuffer1[$x];
+
+									//outTanAngles
+									tokenize ($myAnimInfo[$j+7], $tempBuffer1);
+									$myOta = $tempBuffer1[$x];
+								}//do tangents
+							//Apply keys to each of the targets
+							for($tcount = 0; $tcount < (`size $targets`); $tcount++)
+								{//do each target
+									//check to see if target is blank
+									if($targets[$tcount] == "")
+										{//no targets
+											warning ($myFullSource + " doesn't seem to have any targets. Skipping...\n");
+											continue;
+										}//no targets
+
+									//reset vectorCounter
+									$vectorCounter = 0;
+
+									if(jcIsRoot($targets[$tcount])==1 && $firstFrame == 1 && $doScale == 1)
+										{//might have translate, and we are on the first frame
+											//now set $firstFrame to 0 so we don't recalculate the ratio
+											$firstFrame = 0;
+
+											//search through source to find translateX,Y,Z
+											for($aCount = $currentIndex+2; $aCount < ((int)$indexList[$objIndex+1]-1); $aCount+=8)
+												{//look at each attribute for this object
+													tokenize($myAnimInfo[$aCount], $tempBuffer2);
+													$thisAttribute = $tempBuffer2[1];	
+													if($thisAttribute == "translateX")
+														{//translateX
+															tokenize($myAnimInfo[$aCount+1], $tempBuffer3);
+															$sourcePosList[0] = $tempBuffer3[2];
+															$vectorCounter++;
+														}//translateX
+													else if($thisAttribute == "translateY")
+														{//translateY
+															tokenize($myAnimInfo[$aCount+1], $tempBuffer3);
+															$sourcePosList[1] = $tempBuffer3[2];
+															$vectorCounter++;
+														}//translateY
+													else if($thisAttribute == "translateZ")
+														{//translateZ
+															tokenize($myAnimInfo[$aCount+1], $tempBuffer3);
+															$sourcePosList[2] = $tempBuffer3[2];
+															$vectorCounter++;
+														}//translateZ
+												}//look at each attribute for this object
+											if($vectorCounter == 3)
+												{//get ratio
+													$targetPosList[0] = getAbsLoc($mySource, "translateX");
+													$targetPosList[1] = getAbsLoc($mySource, "translateY");
+													$targetPosList[2] = getAbsLoc($mySource, "translateZ");
+
+													//calculate the source vector magnitude
+													$sourceMag = (sqrt((`pow $sourcePosList[0] 2`) + (`pow $sourcePosList[1] 2`) + (`pow $sourcePosList[2] 2`)));
+													$targetMag = (sqrt((`pow $targetPosList[0] 2`) + (`pow $targetPosList[1] 2`) + (`pow $targetPosList[2] 2`)));
+											
+													//check for divide by zero
+													if($sourceMag != 0)
+														{//get ratio
+															//divide to get the percent difference
+															$myRatio = ($targetMag/$sourceMag);
+														}//get ratio
+													else
+														{//no ratio
+															$myRatio = 1;
+															warning("Source Magnitude is 0, using a ratio of 1:1\n");
+														}//no ratio
+												}//get ratio
+										}//might have translate, and we are on the first frame
+									//set the key
+
+									if($myValType == "BAKED")
+										{//do abs
+														
+											if($myAttrib == "translateX" ||
+											   $myAttrib == "translateY" ||
+											   $myAttrib == "translateZ")
+											        {//relative translate
+													if($offsetType == "applyToOffset")
+														{//use offset
+															$frameNumber = $frameNumber + $myOffset;
+														}//use offset
+
+													//update current frame
+													currentTime $frameNumber;
+
+													if($doScale)
+														{//adapt for scale
+															$temp = $keyVal - $prevKeyVal;
+															$temp1 = $temp * $myRatio;
+															$keyVal = (getAbsLoc($targets[$tcount],$myAttrib) + $temp1);
+														}//adapt for scale
+
+													//set the new value
+													setAbsLoc($targets[$tcount], $myAttrib, $keyVal);
+													
+													//key the new value
+													setKeyframe -attribute $myAttrib $targets[$tcount];
+
+												}//good to go
+											else
+												{//do relative
+													if($offsetType == "applyToOffset")
+														{//use offset
+															$frameNumber = $frameNumber + $myOffset;
+														}//use offset
+
+													setKeyframe -attribute $myAttrib 
+														    -value $keyVal
+														    -time $frameNumber
+														    $targets[$tcount];
+												}//do relative
+										}//do abs
+									else
+										{//do relative
+											if($offsetType == "applyToOffset")
+												{//use offset
+													$frameNumber = $frameNumber + $myOffset;
+												}//use offset
+											setKeyframe -attribute $myAttrib 
+												    -value $keyVal
+												    -time $frameNumber
+												    $targets[$tcount];
+
+											//adjust the tangent info
+											keyTangent -edit
+												   -time $frameNumber
+												   -attribute $myAttrib
+												   -absolute
+												   -inTangentType $myItt
+												   -outTangentType $myOtt
+												   -inAngle $myIta
+												   -outAngle $myOta
+												   -inWeight $myItw
+												   -outWeight $myOtw
+												   $targets[$tcount];
+										}//do relative
+
+								}//do each target
+						}//apply this key
+				}//do each frame
+		}//do each attribute
+
+}//jcApplyKeys
+
+/****************************************************************
+addPathCallback
+
+Notes:
+	This is called when automatically from the
+	fileBrowserDialog proc built into Maya
+	It essentially stores the selected folder
+******************************************************************/
+global proc jcAddPathCallback(string $filename, string $fileType)
+{//jcAddPathCallback
+//global vars	
+	global string $mySelectedFolder;
+
+//record the selected folder
+	$mySelectedFolder = $filename;
+}//jcAddPathCallback
+
+/**************************************************************************************
+jcAddBatchListItem
+
+Arguments:
+	string $batchArray[] - the array that holds the paths to the items that are
+			       to be batched
+	string $listType - "batchListFolders" if the batchList textScrollList holds folder names
+			   "batchListFiles" if the batchList textScrollList holds file names
+	string $recursive - "true"/"false" value from the recursive checkbox in the batch tab
+
+Returns:
+	string[] - returns the updated batchArray that holds the newly added item	
+
+Notes:
+	Adds an item to the batchList
+***************************************************************************************/
+global proc string[] jcAddBatchListItem(string $batchArray[], string $listType, string $recursive)
+{//jcAddBatchListItem
+
+//global vars
+	global string $mySelectedFolder;
+
+//local vars
+	string $myPath;
+	int $numTokens;
+	string $myFileName[];
+	string $tempArray[];
+	int $isDuplicate = 0;
+
+	if($listType == "batchListFiles")
+		{//add individual fils
+			//pop up a file open dialog
+			$myPath = `fileDialog -directoryMask "*.mb; *.ma"`;
+
+			//get file name from path
+			$numTokens = tokenize($myPath, "\\\/", $tempArray);
+
+			//set variable
+			$myFileName[0] = $tempArray[$numTokens-1];
+		}//add individual files
+
+	else if($listType == "batchListFolders")
+		{//add folders
+			$doCallback = "jcAddPathCallback";
+			fileBrowserDialog -m 4 -fc $doCallback -an "Select_Directory";
+
+			//get folder name from path
+			$numTokens = tokenize($mySelectedFolder, "\\\/", $tempArray);
+
+			//set path variable
+			$myPath = $mySelectedFolder;
+			
+			//set variable
+			$myFileName[0] = $tempArray[$numTokens-1];			
+		}//add folders
+
+	else
+		{//bad type
+			error ("jcAddBatchList can't handle the type: " + $listType + "\n");
+		}//bad type
+
+	//check for dupes in array
+	for ($each in $batchArray)
+		{//check for dupes
+			if($each == $myPath)
+				{//add to list
+					//set duplicate flag
+					$isDuplicate = 1;
+				}//add to list
+		}//check for dupes
+
+	if($isDuplicate != 1)
+		{//not a dup
+			//add whole path to batchFileArray
+			$batchArray[`size $batchArray`] = $myPath;
+
+			//add filename to path
+			if($recursive)
+				{//mark as recursive
+					$myFileName[0] = ($myFileName[0] + " (*)");
+				}//mark as recursive
+			jcAddToList($myFileName,"batchFileList", 1);			
+		}//not a dup
+	else
+		{//its a dup
+			warning ($myPath + " was not added, because it seems to be in the list already. \n");
+		}//its a dup
+
+	//return the array
+	return $batchArray;
+}//jcAddBatchListItem
+
+/********************************************************************
+jcRemoveBatchListItem
+
+Arguments:
+	string $batchArray[] - the array that holds all of the items
+			       that are to be batched
+	string $myList - the textScrollList that is the batchList
+
+Returns:
+	string[] - returns the updated batch array
+
+Notes:
+	This will remove an item from the batchList
+*********************************************************************/
+global proc string[] jcRemoveBatchListItem(string $batchArray[], string $myList)
+{//jcRemoveBatchListItem
+	int $mySelection[];
+	string $tempArray[];
+
+	//make copy of array
+	$tempArray = $batchArray;
+
+	//get selection list
+	$mySelection = `textScrollList -query -selectIndexedItem $myList`;
+
+	for($i = 0; $i < `size $mySelection`; $i++)
+		{//remove from list
+			//remove from array
+			$tempArray[$mySelection[$i]-1] = "*DEL*";
+		}//remove from list
+
+	//clear the old array
+	clear $batchArray;
+
+	//copy new list of files back
+	for($i = 0; $i < `size $tempArray`; $i++)
+		{//copy array back
+			if($tempArray[$i] != "*DEL*")
+				{//do copy
+					$batchArray[`size $batchArray`] = $tempArray[$i];
+				}//do copy
+		}//copy array back
+
+	//remove from list
+	jcRemoveFromList($myList);
+		
+	//return the new list of files
+	return $batchArray;
+}//jcRemoveBatchListItem
+
+/**********************************************************
+jcStartBatch
+
+Arguments:
+	string $batchArray[] - the array that holds the items to be batched
+	string $myAnimInfo[] - the array that holds the animation/pose info 
+			       to be used as the source file
+	string $listType - "batchListFiles" or "batchListFolders", what kind of items
+			   are in the batchList
+	string $batchList - the name of the textScrollList to use as the batchList
+	string $sourceFile - path to the source file to be applied to the batched items
+	string $logFile - path to the log file
+	string $logStyle - "batchErrorsOnly" or "batchVerbose", log only errors, or log everything 
+	string $logPref - "batchOverWriteLog" or "batchAppendLog", overwrite the old log or add to it
+			
+Returns:
+	none
+
+Notes:
+	This will start the batching process based on the info in the batch tab
+***********************************************************/
+global proc jcStartBatch(string $batchArray[], string $myAnimInfo[], string $listType, string $batchList, string $sourceFile, string $logFile, string $logStyle, string $logPref)
+{//jcStartBatch
+
+//local vars
+	string $allFiles[];
+	string $tempArray[];
+	string $myFolders[];
+	string $tempBuffer[];
+	string $tempFiles[];
+	string $allListItems[];
+	string $thisItem;
+	string $thisDir;
+	string $myFileType;
+	string $myValueType;
+	string $noTargets[];  //needed to pass to jcApplyAnim, it will always be empty
+	string $thisFile;
+	string $systemTime;
+	string $systemDate;
+
+	float $startTime;
+	float $elapsedTime;
+	int $i;
+
+	//progress variables
+	int $batchCount = 1;
+	int $batchTotal = 0;
+
+//make sure there are some files listed
+$allListItems = `textScrollList -query -allItems $batchList`;
+if(`size $allListItems` == 0)
+	{//error, no files
+		error ("No Files listed in the Batch List!\n");
+	}//error, no files
+//which type are we dealing with?
+	if($listType == "batchListFiles")
+		{//batch the files
+			$allFiles = $batchArray;
+		}//batch the files
+
+//folders
+	else if($listType == "batchListFolders")
+		{//batch the folders
+			//for each of the items in the batch list; check for recursion, get files
+
+			//***REMOVE ME***
+			//$allListItems = `textScrollList -query -allItems $batchList`;
+			//***REMOVE ME***
+
+			//loop through each item in the list
+			for($i=0; $i<(`size $allListItems`); $i++)
+				{//do each dir
+					$thisItem = $allListItems[$i];
+					tokenize($thisItem, "(", $tempBuffer);
+					if($tempBuffer[1] == "*)")
+						{//do recursion
+							//add slash to current path
+							$thisDir = ($batchArray[$i] + "/");
+
+							//get files from all folders below this one
+							$tempFiles = listMyFiles($thisDir, $allFiles, 1);
+							
+							//add to total file list
+							appendToArray($allFiles, $tempFiles);
+
+						}//do recursion
+					else
+						{//do each dir
+							//add slash to current path
+							$thisDir = ($batchArray[$i] + "/");
+
+							//add files to total file list
+							appendToArray($allFiles, listMyFiles($thisDir, $allFiles, 0));
+						}//do each dir
+				}//do each dir
+
+		}//batch the folders
+	else
+		{//unknown type
+			error ("jcStartBatch can't handle the type: " + $listType + "\n");			
+		}//unknown type
+
+
+//Setup the batch run
+if($sourceFile != "")
+	{//we have a source file
+		//handle logging
+		if($logFile != "")
+			{//start logging			
+				//setup echo to file
+				if($logPref == "batchAppendLog")
+					{//append
+						//do nothing, as this is the default for the scriptEditorInfo function
+					}//append
+				else if ($logPref == "batchOverWriteLog")
+					{//overwrite
+						//clear out old log
+						$logId = `fopen $logFile "w"`;
+						fprint $logId ("Animation Copy & Store Log File\n");
+						fclose $logId;
+					}//overwrite
+
+				if($logStyle == "batchErrorsOnly")
+					{//echo errors only
+						scriptEditorInfo -historyFilename $logFile -writeHistory true -suppressInfo;
+					}//echo errors only
+				else if($logStyle == "batchVerbose")
+					{//echo all info
+						scriptEditorInfo -historyFilename $logFile -writeHistory true;
+					}//echo all info
+				$systemTime = `system("time /t")`;
+				$systemDate = `system("date /t")`;
+				print ("Batch Process Started on " + $systemDate);
+				print ($systemTime + "\n");
+				//start timer				
+				$startTime = `timerX`;
+			}//start logging
+		else
+			{//no logging
+				print "No logging\n";
+			}//no logging
+
+		//Load the current file
+		$myAnimInfo = jcLoadAnimFile("", $sourceFile);
+
+		//grab the file type
+		$myFileType = jcGetFileType ($myAnimInfo);
+
+		//grab the value type
+		$myValueType = jcGetValueType ($myAnimInfo);
+
+		print "Start batching!\n";
+
+		//Run the batch here:
+		//do this to all files in total file list
+		$batchTotal = (`size $allFiles`);
+
+		for($each in $allFiles)
+			{//do each file
+				print ("\nFile: " + $each + "("+ $batchCount  + " of " + $batchTotal + ")\n\n");
+
+				//open target file
+				if(catch($thisFile = `file -force -open $each`))
+					{//oops
+						warning ("Was unable to open: " + $each + " for batch process...\n");
+						//update the count and continue
+						$batchCount++;
+						continue;
+					}//oops
+				else
+					{//file opened
+						print ("Opened " + $each + " for batch process\n");
+					}//file opened
+
+				//apply the animation.. Use all automatic settings
+				jcApplyAnim($myAnimInfo, $noTargets, 1, "onErrorContinue", 0, "applyToCurrentFrame", 0);
+
+				//savefile
+				if(catch(`file -save`))
+					{//save didn't go well
+						warning ("Couldn't Save " + $each + "\n");
+						//update the count and continue
+						$batchCount++;
+						continue;
+					}//save didn't go well
+				else
+					{//all done
+						print ("Saved: " + $each + "\n");
+					}//all done
+				//update batch count
+				$batchCount++;
+			}//do each file
+
+		//stop logging
+		if($logFile != "")
+			{//calc time
+				$elapsedTime = `timerX -startTime $startTime`;
+				print ("****Batch Finished! (" + $elapsedTime + " seconds) ****");
+				scriptEditorInfo -writeHistory false;
+			}//calc time
+	}//we have a source file
+else
+	{//no source file
+		error ("You Must provide a source file for the batch process!\n");
+	}//no source file
+}//jcStartBatch
+
+/*************************************************************
+jcBatchSource
+
+Arguments:
+	string $myField - name of the field to store the selected source file
+
+Returns:
+	none
+
+Notes:
+	This lets the user select the source file for the batching process
+**************************************************************/
+global proc jcBatchSource(string $myField)
+{//jcBatchSource
+	string $myPath;
+
+	//open a file dialog
+	$myPath = `fileDialog -directoryMask "*.jcp; *.jca"`;
+
+	//save path to text field
+	textField -edit -text $myPath $myField;
+}//jcBatchSource
+
+/*************************************************************
+jcLogSource
+
+Arguments:
+	string $myField - the text field that will hold the path to the log file
+
+Returns:
+	none
+
+Notes:
+	This will let the user set a log file path
+**************************************************************/
+global proc jcLogSource(string $myField)
+{//jcLogSource
+
+//local vars
+	string $myPath;
+
+	//Open a save file dialog
+	$savePromptDialog = `promptDialog -title "Save File"
+		     -message "Specify Path to Save file (include file Name)"
+		     -button "OK"
+		     -button "Cancel"
+		     -dismissString "Cancel"
+		     -defaultButton "OK"`;
+
+	if($savePromptDialog == "OK")
+		{//get log file path
+			$myPath = `promptDialog -q`;
+
+			//save path to text field
+			textField -edit -text $myPath $myField;
+		}//get log file path
+
+}//jcLogSource
+
+/*************************************************************************************
+jcAnimCS()
+
+Arguments:
+	none
+
+Returns:
+	none
+
+Notes:
+	This is sets up the main UI for the jcAnimCS utility
+	The main global proc Name needs to be the same as the script file name 
+	(minus the .mel of course)
+*************************************************************************************/
+global proc jcAnimCS()
+{//jcAnimCS
+
+//global vars
+global string $myFileArray[];
+global string $myTargetArray[];
+global string $myFileTempArray[];
+global string $myBatchArray[]; //all of the actual file names to apply the batch to
+global string $mySelectedFolder;
+
+//Local Vars
+string  $myNewObject[];
+
+//Clear arrays for next run
+clear $myTargetArray;
+clear $myFileArray;
+clear $myFileTempArray;
+clear $myBatchArray;
+
+//Create Main Window (jcAnimCSWin)
+//Check to see if there is a window with the same name already in use
+if(`window -exists jcAnimCSWin` == 1)
+	{//Window Exists
+		//The window already exists, so delete it before making the next one
+		print "Window Exists! Deleting it to make room for the new one...\n";
+		deleteUI jcAnimCSWin;
+	}//Window Exists
+
+//The window should be gone if it previously existed.  Time to make the new one:
+string $myWindow = `window
+			-title "Animation Copy & Store"
+			-menuBar on
+			-minimizeButton on
+			-maximizeButton off
+			-titleBar on
+			-sizeable on
+			jcAnimCSWin`;
+	
+//***Tab Layouts***
+tabLayout;
+
+//***** Save Tab *****
+//main rowLayout for the "Save" tab
+//this tab is split up into 2 columns that hold
+//the lists and the buttons
+rowLayout 
+	-numberOfColumns 2
+	-columnWidth2 200 200
+	-columnAttach 1 "both" 5
+	-columnAttach 2 "both" 5
+	save;
+
+//Column 1
+	columnLayout
+		-adjustableColumn true
+		-columnAlign "center"
+		saveColumn1;
+
+//Label for the text list
+	text
+		-label "Objects To Save"
+		-height 25
+		-align "center";
+
+//List on the left
+	textScrollList
+		-numberOfRows 31
+		-allowMultiSelection true
+		saveObjectTextList;
+		
+//spacer
+//this is just used to make some blank space to help the UI
+//look a bit less overwhelming
+	text
+		-label ""
+		-height 10;
+
+//Save to file Button on left
+	button
+		-label "Save To File"
+		-command "$filePath = `textField -query -text quickSaveText`;\
+			  jcSaveAnimFile(\"saveObjectTextList\",\
+					$filePath,\
+					`radioCollection -query -select saveTypeRadioCol`,\
+					`intField -query -value saveStartFrameField`,\
+					`intField -query -value saveEndFrameField`,\
+					`checkBox -query -value absFrameNumberCheck`,\
+					`radioCollection -query -select valueTypeCol`);"
+		saveToFileButton;
+
+//Back to main "Save" rowLayout
+setParent save;
+
+//Column 2
+	columnLayout
+		-adjustableColumn true
+		saveColumn2;
+
+//spacer
+		text
+			-label ""
+			-height 25;
+
+//Load file for Edit button
+		button
+			-label "Load File For Edit"
+			-command "jcLoadAnimFile(\"saveObjectTextList\",\"\");"
+			loadFileForEditButton;
+
+//Spacer
+		text
+			-label""
+			-height 37;
+//Add object button
+		button
+			-label "<< Add Object To List"
+			-c "if(`checkBox -query -value addHiCheck`){select -hi;}\
+			    $myNewObject = `ls -sl`;\
+			    jcAddToList($myNewObject, \"saveObjectTextList\", 0);"
+			addObjectToSaveListButton;
+
+//Spacer
+		text
+			-label ""
+			-height 5;
+
+//layout for checkBox
+rowLayout
+	-numberOfColumns 1
+	-columnAlign1 "left";
+
+//Add Hierarchy
+		checkBox
+			-label "Add Hierarchy"
+			addHiCheck;
+
+//back to main col layout
+setParent..;
+
+//Spacer
+		text
+			-label ""
+			-height 10;
+
+//Remove Objects button
+		button
+			-label "Remove Object From List >>"
+			-c "jcRemoveFromList(\"saveObjectTextList\");"
+			removeObjectFromSaveListButton;
+
+//Spacer
+		text
+			-label ""
+			-height 37;
+
+//Layout to hold the radiobuttons
+	columnLayout;
+
+	text
+		-label "File Type:";
+				
+	radioCollection saveTypeRadioCol;
+		radioButton 
+			    -label "Save Pose Only"
+			    -onCommand "intField -edit -enable false saveStartFrameField;\
+					intField -edit -enable false saveEndFrameField;"
+			    savePoseOnly;	
+
+		radioButton 
+			    -label "Save Animation"
+			    saveAnimation;
+
+		radioButton
+			    -label "Save Animation Range" 
+			    -onCommand "intField -edit -enable true saveStartFrameField;\
+					intField -edit -enable true saveEndFrameField;\
+					checkBox -edit -enable true absFrameNumberCheck;"
+			    -offCommand "intField -edit -enable false saveStartFrameField;\
+				        intField -edit -enable false saveEndFrameField;\
+					checkBox -edit -enable false absFrameNumberCheck;"
+
+			saveAnimationRange;
+
+	rowLayout
+		-numberOfColumns 2
+		-columnAlign2 "left" "left"
+		-columnWidth2 20 160;
+		
+		text
+			-label ""
+			-width 10;
+
+		checkBox
+			-label "Use Absolute Frame Number"
+			-enable false
+			absFrameNumberCheck;
+	setParent..;
+
+//Back to column 2 columnLayout
+setParent saveColumn2;
+
+//Layout to hold the indented "Start Frame" text and number fields
+	rowLayout
+		-numberOfColumns 3
+		-columnWidth3 22 60 20;
+		
+	text
+		-label "";
+
+	text
+		-label "Start Frame";
+
+	intField
+		-min 0
+		-v 0
+		-enable false
+		saveStartFrameField;
+
+//back to column 2 columnLayout
+setParent..;
+
+//Layout to hold the indented "End Frame" text and number fields
+	rowLayout
+		-numberOfColumns 3
+		-columnWidth3 22 60 20;
+		
+		text
+			-label "";
+
+		text
+			-label "End Frame";
+
+		intField
+			-min 0
+			-v 0
+			-enable false
+			saveEndFrameField;
+
+//back to column 2 columnLayout
+setParent saveColumn2;
+
+//spacer
+	text
+		-label ""
+		-height 30;
+
+rowLayout
+	-numberOfColumns 1;
+	
+	text
+		-label "Store Values as:";
+
+setParent..;
+
+columnLayout
+	-columnAlign "left"
+	-adjustableColumn true;
+
+	radioCollection valueTypeCol;
+		radioButton -label "Relative Transforms(local space)" -enable true relKeyValue;
+		radioButton -label "Joints Only" -enable true bakeKeyValue;
+setParent..;
+	
+
+//Now set the default value - set the collection in edit mode and 
+//This has to be set after the intFields and abs/rel radio buttons have been created
+//select the first option
+		radioCollection -edit -select savePoseOnly saveTypeRadioCol;
+//select relative as default
+		radioCollection -edit -select relKeyValue valueTypeCol;
+
+//spacer
+	text
+		-label ""
+		-height 27;
+
+//Column layout to hold the Quick Save check box
+//If we didn't use a new layout this text would
+//get cented to the column 2 column.
+
+	columnLayout;
+//Quick Save check box 
+//When checked it will enable the text field, when unchecked it will
+//disable it.
+	checkBox 
+		-label "Quick Save To File" 
+		-onCommand "textField -edit -enable true quickSaveText;"
+		-offCommand "textField -edit -enable false quickSaveText;\
+			     textField -edit -text \"\" quickSaveText;"
+		quickSaveCheck;
+
+
+//Back to column 2 columnLayout
+setParent saveColumn2;
+
+//textField to hold the path to the quick save file - disabled by default
+	textField
+		-text ""
+		-editable true
+		-enable false
+		quickSaveText;
+
+//Back to column 2 columnLayout
+setParent saveColumn2;
+
+//Back to "Save" main rowLayout
+setParent..;
+
+//Back to main tabLayout
+setParent..;
+
+
+//****** Load Tab *******
+columnLayout
+	-adjustableColumn true
+	load;
+
+//section1 of load tab
+rowLayout
+	-numberOfColumns 2
+	-columnWidth2 200 200
+	-columnAttach 1 "both" 5
+	-columnAttach 2 "both" 5
+	loadSec1RowLayout;
+
+	//Left List
+	columnLayout
+		-adjustableColumn true
+		-columnAlign "center"
+		loadLeftColSec1;
+
+		text
+			-label "Source Objects";
+
+		textScrollList
+			-numberOfRows 23
+			-allowMultiSelection false			
+			-selectCommand "jcUpdateTargetList(\"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\", $myTargetArray);"
+			loadSourceObjectsTextList;
+
+
+	//Back to loadSEc1RowLayout
+	setParent..;
+
+	//Right List
+	columnLayout
+		-adjustableColumn true
+		-columnAlign "center"
+		loadRightColSec1;
+
+		text
+			-label "Target Objects (source centric)";
+
+		textScrollList
+			-numberOfRows 23
+			-allowMultiSelection true
+			loadTargetObjectsTextList;
+
+//set parent back to "Load" main column layout
+setParent load;
+
+	//text under lists
+	rowLayout
+		-numberOfColumns 1
+		-columnAlign1 "center";
+	//quick directions on usage
+	text
+		-align "center"
+		-label "Select animation source item on left.  Add objects to list at the right \nto copy the animation to.";
+
+//Back to "load" - main layout
+setParent..;
+
+	//Spacer
+	text
+		-label ""
+		-height 20;
+
+	//one row layout with two columns - 4 buttons under lists
+	rowLayout
+		-numberOfColumns 2
+		-columnAttach 1 "both" 5
+		-columnAttach 2 "both" 5
+		-columnWidth2 200 200;
+
+	//Buttons on left
+	columnLayout
+		-adjustableColumn true
+		-columnAlign "center";
+
+		button
+			-label "Load Objects From File"
+			-command "$myFileArray = jcLoadAnimFile(\"loadSourceObjectsTextList\",\"\");\
+				  $myFileType = jcGetFileType($myFileArray);\
+				  $myValueType = jcGetValueType($myFileArray);\
+				  text -edit -label (\"Current Loaded File Type: \" + $myFileType + \" \(\" + `tolower $myValueType` + \"\)\") loadedFileTypeTextLabel;\
+				  if($myFileType == \"ANIMATION\") {radioButton -edit -enable true applyToOffset;\
+				  radioButton -edit -enable true applyToCurrentFrame;\
+				  intField -edit -enable false loadOffsetFrameField;}\
+				  else {radioButton -edit -enable false applyToCurrentFrame;\
+					radioButton -edit -enable false applyToOffset;\
+					intField -edit -enable false loadOffsetFrameField;};\
+				  if($myValueType == \"BAKED\" && $myFileType == \"ANIMATION\"){checkBox -edit -value 0 -enable true scaleAdaptCheck;}\
+				  else {checkBox -edit -value 0 -enable false scaleAdaptCheck;};"
+			loadLoadObjectsFromFileButton;
+
+		button
+			-label "Remove Object From List"
+			-command "$myFileTempArray = jcRemoveFromSourceList($myFileArray, $myTargetArray, \"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\", $myTargetArray);\
+				  clear $myFileArray;\
+				  $myFileArray = $myFileTempArray;\
+				  jcUpdateTargetList(\"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\", $myTargetArray);"
+			loadRemoveObjectFromListButton;
+
+	//Back to rowLayout
+	setParent..;
+
+
+	//buttons on right
+	columnLayout
+		-adjustableColumn true
+		-columnAlign "center";
+
+		button
+			-label "Add Targets"
+			-command "$myTargetArray = jcAddTargets(`ls -sl`, $myTargetArray, \"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\");\
+				  jcUpdateTargetList(\"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\", $myTargetArray);"
+			loadAddObjectButton;
+
+		button
+			-label "Remove Targets"
+			-command "$myTargetArray = jcRemoveTargets($myTargetArray, \"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\");\
+				  jcUpdateTargetList(\"loadSourceObjectsTextList\", \"loadTargetObjectsTextList\", $myTargetArray);"
+			loadRemoveObjectButton;
+
+//Back to main load layout
+setParent load;
+
+//Spacer
+text
+	-label ""
+	-height 10;
+
+//Dividing line
+separator
+	-style "in";
+
+//spacer
+text
+	-label ""
+	-height 10;
+
+//Section 2
+rowLayout
+	-numberOfColumns 2
+	-columnWidth2 200 200
+	-columnAttach 1 "both" 5
+	-columnAttach 2 "both" 5
+	loadSec2RowLayout;
+
+		//Column1
+		//Checkbox and radio buttons
+			columnLayout
+				-columnAlign "left"
+				-adjustableColumn true;
+
+		//rowLayout to properly place the checkbox
+			rowLayout;
+				checkBox
+					-label "Auto Map Objects"
+					-onCommand "radioButton -edit -enable true onErrorContinue;\
+						    radioButton -edit -enable true onErrorCancel;\
+						    radioButton -edit -enable true onErrorAsk;\
+						    clear $myTargetArray;\
+						    textScrollList -edit -removeAll loadTargetObjectsTextList;\
+						    button -edit -enable false loadAddObjectButton;\
+						    button -edit -enable false loadRemoveObjectButton;"
+
+					-offCommand "radioButton -edit -enable false onErrorContinue;\
+						    radioButton -edit -enable false onErrorCancel;\
+						    radioButton -edit -enable false onErrorAsk;\
+						    button -edit -enable true loadAddObjectButton;\
+						    button -edit -enable true loadRemoveObjectButton;"
+					loadAutoLoadObjectsCheckBox;
+		//backto columnLayout
+			setParent..;
+
+		//layout for the "On Error" text (for it to indent correctly with a spacer)
+			rowLayout
+				-numberOfColumns 2
+				-columnWidth2 20 160;
+
+					text
+						-label ""
+						-width 20;
+
+					text
+						-label "On Error:";
+
+		//back to columnLayout for this section
+			setParent..;
+
+		//indent radio buttons with spacer
+			rowLayout
+				-numberOfColumns 2
+				-columnWidth2 40 100;
+
+					text 
+						-label ""
+						-width 40;
+
+		//columnLayout to properly place radio buttons
+				columnLayout;
+					radioCollection loadOnErrorCol;
+						radioButton -label "Continue" -enable false onErrorContinue;
+						radioButton -label "Cancel" -enable false onErrorCancel;
+						radioButton -label "Ask" -enable false onErrorAsk;
+					
+				//select default setting
+					radioCollection -edit -select onErrorContinue loadOnErrorCol;
+
+	//Back to section 2 main layout
+	setParent loadSec2RowLayout;		
+
+//column2
+	columnLayout
+		-columnAlign "left"
+		-adjustableColumn true;
+
+//layout for Adapt for Scale Checkbox
+		rowLayout;
+			checkBox
+				-label "Adapt For Scale Difference"
+				scaleAdaptCheck;
+//Back to "load" main layout
+setParent load;
+
+//make divider with space above and below it
+columnLayout
+	-columnAttach "both" 5
+	-adjustableColumn true;
+
+	text
+		-label ""
+		-height 10;
+
+	separator
+		-style "in";
+
+	text
+		-label ""
+		-height 10;
+
+//back to "load" main layout
+setParent..;
+
+//section3
+	columnLayout
+		-columnAlign "left"
+		-adjustableColumn true
+		loadSec3ColLayout;
+
+	//show current source file type
+	//this will change based on what type of file is loaded
+	text
+		-label "Current Loaded File Type: (no file loaded)"
+		loadedFileTypeTextLabel;
+
+	//layout for ApplyTo text (indented with spacer)
+	rowLayout
+		-numberOfColumns 2
+		-columnWidth2 20 160;
+
+		text
+			-label ""
+			-width 20;
+
+		text
+			-label "Apply To:"
+			-width 160;
+
+	//back to section 3 columnLayout
+	setParent..;
+
+	//layout for indented radio buttons
+		rowLayout
+			-numberOfColumns 2
+			-columnWidth2 40 100;
+
+				text 
+					-label ""
+					-width 40;
+
+				columnLayout;
+					radioCollection loadApplyToCol;
+						radioButton -label "Default Frame (frame saved in file)" -enable false applyToCurrentFrame;
+						radioButton 
+							-label "Target Frame Offset" 
+							-enable false
+							-onCommand "intField -edit -enable true loadOffsetFrameField;"
+							-offCommand "intField -edit -enable false loadOffsetFrameField;"
+							applyToOffset;
+						radioCollection -edit -select applyToCurrentFrame loadApplyToCol;
+	//back to rowLayout
+			setParent..;
+
+	//back to section 3 columnLayout
+		setParent..;
+
+	//indented "New Start Frame" text and number field
+		rowLayout
+			-numberOfColumns 3
+			-columnWidth3 80 90 200;
+
+			text
+				-label ""
+				-width 60;
+
+			text
+				-label "New Start Frame: ";
+
+			intField
+				-v 0
+				-enable false
+				loadOffsetFrameField;
+	
+//Back to "load" main layout
+setParent load;
+
+//Divider with space above and below
+text
+	-label ""
+	-height 10;
+
+separator
+	-style "in";
+
+text
+	-label ""
+	-height 10;
+
+//section4
+rowLayout
+	-numberOfColumns 3
+	-columnWidth3 150 200 200;
+
+		text
+			-label ""
+			-width 150;
+
+		button
+			-label "Copy Source to Targets"
+			-command "jcApplyAnim($myFileArray,\
+					       $myTargetArray,\
+					      `checkBox -query -value loadAutoLoadObjectsCheckBox`,\
+					      `radioCollection -query -select loadOnErrorCol`,\
+					      `checkBox -query -value scaleAdaptCheck`,\
+					      `radioCollection -query -select loadApplyToCol`,\
+					      `intField -query -value \"loadOffsetFrameField\"`);"
+			loadCopySourceToTargetsButton;
+
+		text
+			-label ""
+			-width 150;
+
+//Back to "load" main layout
+setParent load;
+
+//Back to main tab
+setParent..;
+
+//****** Batch Tab *******
+//main rowLayout for the Batch tab
+rowLayout 
+	-numberOfColumns 2
+	-columnWidth2 200 200
+	-columnAttach 1 "both" 5
+	-columnAttach 2 "both" 5
+	Batch;
+
+//Column 1
+columnLayout
+	-adjustableColumn true
+	-columnAlign "center"
+	batchColumn1;
+
+//spacer
+	text
+		-label ""
+		-height 5;
+
+//Source File text
+	rowLayout
+		-numberOfColumns 1
+		-columnAlign1 "left";
+		
+		text
+			-label "Source File";
+
+//Back to column 1 of batch tab
+setParent batchColumn1;
+
+//centered textField and Button
+	rowLayout
+		-numberOfColumns 2
+		-columnWidth2 20 180;
+	
+		text
+			-label "";
+
+		textField
+			-text ""
+			-width 150
+			batchSourceFileText;
+
+//back to column 1
+setParent batchColumn1;
+
+	rowLayout
+		-numberOfColumns 2
+		-columnAlign2 "center" "center"
+		-columnWidth2 20 180;
+	
+		text
+			-label "";
+
+		button
+			-label "Select Source File"
+			-command "jcBatchSource(\"batchSourceFileText\");"				  
+			-width 150
+			batchSelectSourceFileButton;
+
+setParent batchColumn1;
+
+columnLayout
+	-adjustableColumn true
+	-columnAlign "left";
+
+//spacer
+text
+	-label ""
+	-height 20;
+
+setParent batchColumn1;
+
+	rowLayout
+		-numberOfColumns 1
+		-columnAlign1 "left";
+
+		text
+			-label "Log File";
+
+setParent batchColumn1;
+		
+	rowLayout
+		-numberOfColumns 2
+		-columnWidth2 20 180;
+	
+		text
+			-label "";
+
+		textField
+			-text ""
+			-width 150
+			batchLogFileText;
+
+//back to column 1
+setParent batchColumn1;
+
+	rowLayout
+		-numberOfColumns 2
+		-columnAlign2 "center" "center"
+		-columnWidth2 20 180;
+	
+		text
+			-label "";
+
+		button
+			-label "Select Log File"
+			-command "jcLogSource(\"batchLogFileText\");"
+			-width 150
+			batchSelectLogFileButton;
+
+//back to column 1
+setParent batchColumn1;
+
+text
+	-label ""
+	-height 20;
+
+rowLayout
+	-numberOfColumns 2
+	-columnWidth2 20 100;
+text
+	-label "List Type:";
+	setParent..;
+
+rowLayout
+	-numberOfColumns 2
+	-columnWidth2 20 100;
+
+text
+	-label "";
+
+columnLayout;
+//Batch List collection
+radioCollection batchListTypeCol;
+	radioButton 
+		-label "Files" 
+		-enable true 
+		-offCommand "clear $myBatchArray;\
+			     textScrollList -edit -removeAll batchFileList;"
+		batchListFiles;
+	radioButton
+		-label "Folders" 
+		-enable true 
+		-onCommand "checkBox -edit -enable true batchRecursiveCheckBox;"
+		-offCommand "checkBox -edit -enable false batchRecursiveCheckBox;\
+			     checkBox -edit -value false batchRecursiveCheckBox;\
+			     clear $myBatchArray;\
+			     textScrollList -edit -removeAll batchFileList;"
+		batchListFolders;
+
+	//select Default setting
+	radioCollection -edit -select batchListFiles batchListTypeCol;
+	setParent..;
+	setParent..;
+
+rowLayout
+	-numberOfColumns 2
+	-columnWidth2 40 100;
+
+text
+	-label "";
+
+	//use recursion?
+	checkBox
+		-label "Recursive"
+		-enable false
+		batchRecursiveCheckBox;
+
+setParent batchColumn1;
+
+//Log file options and indented radioButtons
+text
+	-label ""
+	-height 20;
+
+	rowLayout
+		-numberOfColumns 1
+		-columnAlign1 "left";
+
+		text
+			-label "Logging Style:";
+
+//back to column 1
+setParent batchColumn1;
+
+	rowLayout
+		-numberOfColumns 2
+		-columnWidth2 20 150;
+
+	text
+		-label "";
+
+//proper layout for radio buttons so the text doesn't get centered to column 1
+	columnLayout;
+				
+		radioCollection batchLoggingStyleRadioCol;
+			radioButton -label "Errors Only" batchErrorsOnly;
+			radioButton -label "Verbose" batchVerbose;
+		//select the first option for default
+			radioCollection -edit -select batchErrorsOnly batchLoggingStyleRadioCol;
+
+//back to column 1
+setParent batchColumn1;
+
+text
+	-label ""
+	-height 10;
+
+	rowLayout
+		-numberOfColumns 1
+		-columnAlign1 "left";
+
+		text
+			-label "Log File Save Pref:";
+
+//back to column 1
+setParent batchColumn1;
+
+	rowLayout
+		-numberOfColumns 2
+		-columnWidth2 20 150;
+
+	text
+		-label "";
+
+
+//proper layout so text doesn't get centered to column 1
+	columnLayout;
+				
+		radioCollection batchLoggingPrefRadioCol;
+			radioButton -label "Append" batchAppendLog;
+			radioButton -label "Overwrite" batchOverWriteLog;
+		//select the first option for default
+			radioCollection -edit -select batchAppendLog batchLoggingPrefRadioCol;
+
+
+//back to column 1
+setParent batchColumn1;
+
+//spacer
+text
+	-label ""
+	-height 26;
+
+//Last two buttons for column 1
+button
+	-label "Add Item To List"
+	-command "$myBatchArray = jcAddBatchListItem($myBatchArray,\
+				     `radioCollection -query -select batchListTypeCol`,\
+				     `checkBox -query -value batchRecursiveCheckBox`);"
+	batchAddFileToListButton;
+
+text
+	-label ""
+	-height 5;
+button
+	-label "Remove Item From List"
+	-command "$myBatchArray = jcRemoveBatchListItem($myBatchArray, \"batchFileList\");"
+	batchRemoveFileFromListButton;
+
+setParent..;
+
+//Column2
+//item list and button
+	columnLayout
+		-adjustableColumn true
+		batchColumn2;
+
+		text
+			-label "Batch List";
+
+		textScrollList
+			-numberOfRows 30
+			-allowMultiSelection true
+			batchFileList;
+
+		button
+			-label "Start Batch"
+			-command "jcStartBatch($myBatchArray,\
+				  $myFileArray,\
+				  `radioCollection -query -select batchListTypeCol`,\
+				  \"batchFileList\",\
+				  `textField -query -text batchSourceFileText`,\
+				  `textField -query -text batchLogFileText`,\
+				  `radioCollection -query -select batchLoggingStyleRadioCol`,\
+				  `radioCollection -query -select batchLoggingPrefRadioCol`);"
+			batchStartBatchButton;
+			
+//Back to main window
+setParent Batch;
+
+//We are finally done defining the UI.  Now lets show it!
+showWindow $myWindow;
+
+}//jcAnimCS

@@ -1,0 +1,123 @@
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//							- Pin to Mesh v1.0 -
+//			This script will parent any maya object to any face on a polygon mesh.
+//
+//			Directions: 
+//			1.) Select the target object(s), shift select a polygon face.
+//			2.) Execute cgTkPinToMesh;
+//
+//			Basic Procedure:
+//			- The script creates two nodes (pointOnMesh and angleBtw)
+//			- These nodes drive the translates and rotates of a group node.
+//			- The target objects are parented under this node and will follow the mesh.
+//
+//			Known Issues:
+//			- This script will only work in Maya Unlimited.
+//			- The Fur plugin must be loaded.
+
+global proc cgTkPinToMesh()
+{
+	//Store the initial selection.
+	string $sel[] = `ls -sl`;
+	
+	//Store the target object, and the name of the selected face.
+	string $targetObj = $sel[0];
+	string $faceLong = $sel[1];
+	int $face; //Index of selected face.
+	string $surface; //Name of surface face belongs to.
+		
+	//Extract the name of the surface that the face belongs to.
+	string $buffer[];
+	tokenize $faceLong "." $buffer;
+	$surface = $buffer[0];
+	
+	//Extract the index of the selected face from the name of selection.
+	// ie "pPlane1.f[56]" ...becomes... "56"
+	int $sizeOfString = (`size $buffer[1]`) -1;
+	$buffer[3] = `substring $buffer[1] 3 $sizeOfString`;
+	$face = $buffer[3];
+	
+	//Now we need to find the UVs that border the selected face.
+	string $allUVs[];
+	$allUVs = `polyListComponentConversion -fromFace -toUV -border ($surface + ".f[" + $face + "]")`;
+	select $allUVs;
+	$allUVs = `filterExpand -ex true -sm 35`;
+	
+	//With all of the UVs, we are ready to calculate the average.
+	//To find the average, we must first find the coords of each UV.
+	int $i = 0;
+
+	float $allUCoords[];
+	float $allVCoords[];
+	float $uvCoords[];
+	
+	for ($UV in $allUVs)
+	{
+		$uvCoords = `polyEditUV -query $UV`;
+		
+		$allUCoords[$i] = $uvCoords[0];
+		$allVCoords[$i] = $uvCoords[1];
+			
+		$i++;
+	}
+	
+	//Now that we have all the U and V positions, we can add them up.
+	float $uParam;
+	float $vParam;
+	
+	for ($j=0; $j<$i; $j++)
+	{
+		$uParam += $allUCoords[$j];
+		$vParam += $allVCoords[$j];
+	}
+	
+	//With all of them added up, we can divide by the total number,
+	//to arrive at an average UV coord.
+	$uParam = ($uParam / $i);
+	$vParam = ($vParam / $i);
+			
+	$pointInfoNode = `furPointOnMesh -faceIndex $face -u $uParam -v $vParam $surface`;
+	$pointInfoNode = `rename $pointInfoNode ($surface + "_PointOnMeshNode")`;
+
+	// Create an "angleBetween" node, to calculate the rotation required
+	// to rotate the (verticle) attractor to point parallel to the 
+	// object normal.
+	//
+	$angleNode = `createNode angleBetween`;
+	$angleNode = `rename $angleNode ($surface + "_AngleBtwNode")`;
+	
+	// Create a root transform for the joints to sit on.  This transform
+	// will be constrained to lie on the surface, and the joints will
+	// freely move against that.
+	//
+	$root = `group -em -w -n ($surface + "_SurfaceRootGrp")`;
+	$root = "|" + $root;
+	
+	// Now, attach everything together.
+	// The position of the surface point drive the transform position.
+	//
+	connectAttr ($pointInfoNode+".position") ($root+".translate");
+	
+	// The normal of the surface point drives one of the inputs of
+	// angleBetween node;  the other is set permanently to 0 1 0 or
+	// 0 -1 0 depending on flip normals
+	//
+	float $vector1Y = 1.0;
+
+	setAttr -lock true ($angleNode+".vector1") 0.0 $vector1Y 0.0;
+	connectAttr ($pointInfoNode+".normal") ($angleNode+".vector2");
+			
+	// The euler output of the angleBetween node drives
+	// the rotation of the root tranform.
+	//
+	connectAttr ($angleNode+".euler") ($root+".rotate");
+	
+	//Finally, we parent the target object under the root group.
+	parent $targetObj $root;
+	
+	//User feedback
+	print ($targetObj + " was parented to the surface of " + $surface);
+}

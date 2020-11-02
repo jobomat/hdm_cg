@@ -1,0 +1,219 @@
+proc connectZuckafaFace ()
+{
+	//NOSE EXPRESSION
+	expression -n "snarlExpression" -s ("zuckafaBlendshapes.leftSnarl = clamp(0,1, (leftNoseControl.translateY));"
+										+ "zuckafaBlendshapes.rightSnarl = clamp(0,1, (rightNoseControl.translateY));");
+	
+	//CHEEKS EXPRESSION
+	expression -n "cheeksExpression" -s ("zuckafaBlendshapes.leftCheekBlow = clamp(-1,1, (leftCheekControl.translateX));"
+											+ "zuckafaBlendshapes.rightCheekBlow = clamp(-1,1, (rightCheekControl.translateX));");
+	
+	//TONGUE EXPRESSION
+	expression -n "tongueExpression" -s ("tongueJoint2.rotateZ = abs(tongueTipControl.translateY * 30);"
+											+ "tongueJoint3.rotateZ = abs(tongueTipControl.translateY * 20);"
+											+ "tongueJoint3.rotateZ = tongueTipControl.translateY;"
+											+ "tongueJoint4.rotateZ = tongueTipControl.translateY * 3;"
+											+ "tongueJoint5.rotateZ = tongueTipControl.translateY * 4;"
+											+ "tongueJoint6.rotateZ = tongueTipControl.translateY * 5;"
+											+ "tongueJoint7.rotateZ = tongueTipControl.translateY * 8;"
+											+ "tongueJoint8.rotateZ = tongueTipControl.translateY * 10;"
+											+ "tongueJoint9.rotateZ = tongueTipControl.translateY * 14;"
+											+ "tongueJoint10.rotateZ = tongueTipControl.translateY * 16;"
+											+ "tongueJoint11.rotateZ = tongueTipControl.translateY * 18;"
+											+ "tongueJoint12.rotateZ = tongueTipControl.translateY * 20;"
+											+ "tongueJoint13.rotateZ = tongueTipControl.translateY * 22;"
+											+ "tongueJoint14.rotateZ = tongueTipControl.translateY * 24;"
+											+ "tongueJoint2.rotateY = tongueSideControl.translateX * 1;"
+											+ "tongueJoint3.rotateY = tongueSideControl.translateX * 2;"
+											+ "tongueJoint4.rotateY = tongueSideControl.translateX * 3;"
+											+ "tongueJoint5.rotateY = tongueSideControl.translateX * 4;"
+											+ "tongueJoint6.rotateY = tongueSideControl.translateX * 5;"
+											+ "tongueJoint7.rotateY = tongueSideControl.translateX * 8;"
+											+ "tongueJoint8.rotateY = tongueSideControl.translateX * 10;"
+											+ "tongueJoint9.rotateY = tongueSideControl.translateX * 14;"
+											+ "tongueJoint10.rotateY = tongueSideControl.translateX * 16;"
+											+ "tongueJoint11.rotateY = tongueSideControl.translateX * 18;"
+											+ "tongueJoint12.rotateY = tongueSideControl.translateX * 20;"
+											+ "tongueJoint13.rotateY = tongueSideControl.translateX * 22;"
+											+ "tongueJoint14.rotateY = tongueSideControl.translateX * 24;"
+											+ "tongueJoint5.scaleX = 1 + tongueTipControl.translateX;"
+											+ "tongueJoint6.scaleX =  1 + tongueTipControl.translateX;"
+											+ "tongueJoint7.scaleX = 1 + tongueTipControl.translateX;"
+											+ "tongueJoint8.scaleX = 1 + tongueTipControl.translateX;"
+											+ "tongueJoint9.scaleX = 1 + tongueTipControl.translateX;"
+											+ "tongueJoint10.scaleX = 1 + tongueTipControl.translateX ;"
+											+ "tongueJoint11.scaleX = 1 + tongueTipControl.translateX ;"
+											+ "tongueJoint12.scaleX = 1 + tongueTipControl.translateX ;"
+											+ "tongueJoint13.scaleX = 1 + tongueTipControl.translateX;"
+											+ "tongueJoint14.scaleX = 1 + tongueTipControl.translateX ;");
+	
+	
+	//JAWORIENT EXPRESSION
+	expression -n "jawExpression" -s ("jaw.rotateZ = clamp (-25,3, jawControl.translateY * 25);"
+										+ "jaw.rotateY = clamp (-15,15, jawControl.translateX * 15);"
+										+ "zuckafaBlendshapes.neckFatten = clamp(0,1, jawControl.translateY*-1);"
+										+ "zuckafaBlendshapes.jawFlex = clamp(0,1, jawControl.translateY * 5);"
+										+ "zuckafaBlendshapes.mouthOpen = clamp(0,1, jawControl.ty*-1);");
+	
+	//UPPERLIP EXPRESSION
+	expression -n "upperLipExpression" -s ("zuckafaBlendshapes.leftUpperLipUp = clamp(0,1, (topLipLeftControl.translateY));"
+											+ "zuckafaBlendshapes.rightUpperLipUp = clamp(0,1, (topLipRightControl.translateY));"
+											+ "zuckafaBlendshapes.leftUpperLipDown = clamp(0,1, (topLipLeftControl.translateY * -1));"
+											+ "zuckafaBlendshapes.rightUpperLipDown = clamp(0,1, (topLipRightControl.translateY * -1));");
+	
+	
+	
+	//LOWERLIP EXPRESSION
+	expression -n "lowerLipExpression" -s ("zuckafaBlendshapes.leftLowerLipUp = clamp(0,1, (bottomLipLeftControl.translateY));"
+											+ "zuckafaBlendshapes.rightLowerLipUp = clamp(0,1, (bottomLipRightControl.translateY)) ;"
+											+ "zuckafaBlendshapes.leftLowerLipDown = clamp(0,1, (bottomLipLeftControl.translateY *-1)) ;"
+											+ "zuckafaBlendshapes.rightLowerLipDown = clamp(0,1, (bottomLipRightControl.translateY *-1)) ;");
+	
+	//FROWN EXPRESSION
+	expression -n "smileFrownExpression" -s ("zuckafaBlendshapes.leftFrown = clamp(0,1, (mouthSyncControl.frown + mouthSyncControl.asymetric));"
+											+ "zuckafaBlendshapes.rightFrown = clamp(0,1, (mouthSyncControl.frown + (mouthSyncControl.asymetric*-1)));"
+											+ "zuckafaBlendshapes.neckFlex = clamp(0,1, (zuckafaBlendshapes.leftFrown + zuckafaBlendshapes.rightFrown)/2);");
+		
+	
+	//MOUTH SYNC EXPRESSION
+	expression -n "mouthSyncExpression" -s ("zuckafaBlendshapes.pucker = clamp(0,1, (mouthSyncControl.translateY *-1) + jawControl.translateY);"
+											+ "zuckafaBlendshapes.leftSmile = clamp(0,1, (mouthSyncControl.translateY + mouthSyncControl.asymetric) + jawControl.translateY);"
+											+ "zuckafaBlendshapes.rightSmile = clamp(0,1, (mouthSyncControl.translateY + (mouthSyncControl.asymetric*-1)) + jawControl.translateY);"
+											+ "bottomLipShapes.bottomNarrow = clamp(0,1, (mouthSyncControl.translateY *-1) + jawControl.translateY);"
+											+ "bottomLipShapes.bottomWide = clamp(0,1, (mouthSyncControl.translateY) + jawControl.translateY);"
+											+ "topLipShapes.topNarrow = clamp(0,1, (mouthSyncControl.translateY *-1) + jawControl.translateY);"
+											+ "topLipShapes.topWide = clamp(0,1, (mouthSyncControl.translateY) + jawControl.translateY);");
+													
+											
+	//MOUTH LEFT RIGHT EXPRESSION
+	expression -n "mouthLeftRightExpression" -s ("zuckafaBlendshapes.mouthLeft = clamp(0,1, (mouthControl.translateX * 2));"
+												+ "zuckafaBlendshapes.mouthRight = clamp(0,1, (mouthControl.translateX * -2));");
+	
+	//SQUINT SDK
+	expression -n "squintExpression" -s ("zuckafaBlendshapes.leftSquint = clamp(0,1, (leftSquintControl.translateX *-1));"
+												+ "zuckafaBlendshapes.rightSquint = clamp(0,1, (rightSquintControl.translateX * -1));");
+		
+	//BROW SQUEEZE EXPRESSION
+	expression -n "squintExpression" -s "zuckafaBlendshapes.browSqueeze = clamp(0,1, (innerBrowControl.browSqueeze));";
+		
+	//EYE BLINK SDK
+		//RIGHT EYE TOP LID
+		setAttr "rightTopLidControl.translateY" 0;
+		setAttr "rightEyeTopLidJoint.rotateX" 0;
+		setDrivenKeyframe -cd rightTopLidControl.translateY rightEyeTopLidJoint.rotateX;
+		
+		setAttr "rightTopLidControl.translateY" -1;
+		setAttr "rightEyeTopLidJoint.rotateX" 27;
+		setDrivenKeyframe -cd rightTopLidControl.translateY rightEyeTopLidJoint.rotateX;
+		
+		setAttr "rightTopLidControl.translateY" 1;
+		setAttr "rightEyeTopLidJoint.rotateX" -20;
+		setDrivenKeyframe -cd rightTopLidControl.translateY rightEyeTopLidJoint.rotateX;
+		
+		setAttr "rightTopLidControl.translateY" 0;
+		
+		//RIGHT EYE BOTTOM LID
+		setAttr "rightBottomLidControl.translateY" 0;
+		setAttr "rightEyeBottomLidJoint.rotateX" 0;
+		setDrivenKeyframe -cd rightBottomLidControl.translateY rightEyeBottomLidJoint.rotateX;
+		
+		setAttr "rightBottomLidControl.translateY" -1;
+		setAttr "rightEyeBottomLidJoint.rotateX" 20;
+		setDrivenKeyframe -cd rightBottomLidControl.translateY rightEyeBottomLidJoint.rotateX;
+		
+		setAttr "rightBottomLidControl.translateY" 1;
+		setAttr "rightEyeBottomLidJoint.rotateX" -25;
+		setDrivenKeyframe -cd rightBottomLidControl.translateY rightEyeBottomLidJoint.rotateX;
+		
+		setAttr "rightBottomLidControl.translateY" 0;
+		
+		//LEFT EYE TOP LID
+		setAttr "leftTopLidControl.translateY" 0;
+		setAttr "leftEyeTopLidJoint.rotateX" 0;
+		setDrivenKeyframe -cd leftTopLidControl.translateY leftEyeTopLidJoint.rotateX;
+		
+		setAttr "leftTopLidControl.translateY" -1;
+		setAttr "leftEyeTopLidJoint.rotateX" 27;
+		setDrivenKeyframe -cd leftTopLidControl.translateY leftEyeTopLidJoint.rotateX;
+		
+		setAttr "leftTopLidControl.translateY" 1;
+		setAttr "leftEyeTopLidJoint.rotateX" -20;
+		setDrivenKeyframe -cd leftTopLidControl.translateY leftEyeTopLidJoint.rotateX;
+		
+		setAttr "leftTopLidControl.translateY" 0;
+		
+		//LEFT EYE BOTTOM LID
+		setAttr "leftBottomLidControl.translateY" 0;
+		setAttr "leftEyeBottomLidJoint.rotateX" 0;
+		setDrivenKeyframe -cd leftBottomLidControl.translateY leftEyeBottomLidJoint.rotateX;
+		
+		setAttr "leftBottomLidControl.translateY" -1;
+		setAttr "leftEyeBottomLidJoint.rotateX" 20;
+		setDrivenKeyframe -cd leftBottomLidControl.translateY leftEyeBottomLidJoint.rotateX;
+		
+		setAttr "leftBottomLidControl.translateY" 1;
+		setAttr "leftEyeBottomLidJoint.rotateX" -25;
+		setDrivenKeyframe -cd leftBottomLidControl.translateY leftEyeBottomLidJoint.rotateX;
+		
+		setAttr "leftBottomLidControl.translateY" 0;
+	
+	
+	//SOFT EYE SDK
+		//LEFT EYE
+		setAttr "leftEyeJoint.rotateX" 0;
+		setAttr "leftEyeTopLidJoint.rotateX" 0;
+		setAttr "leftEyeBottomLidJoint.rotateX" 0;
+		setDrivenKeyframe -cd leftEyeJoint.rotateX leftEyeTopLidJoint.rotateX leftEyeBottomLidJoint.rotateX;
+		
+		setAttr "leftEyeJoint.rotateX" -30;
+		setAttr "leftEyeTopLidJoint.rotateX" -20;
+		setAttr "leftEyeBottomLidJoint.rotateX" -20;
+		setDrivenKeyframe -cd leftEyeJoint.rotateX leftEyeTopLidJoint.rotateX leftEyeBottomLidJoint.rotateX;
+		
+		setAttr "leftEyeJoint.rotateX" 30;
+		setAttr "leftEyeTopLidJoint.rotateX" 15;
+		setAttr "leftEyeBottomLidJoint.rotateX" 25;
+		setDrivenKeyframe -cd leftEyeJoint.rotateX leftEyeTopLidJoint.rotateX leftEyeBottomLidJoint.rotateX;
+		
+		setAttr "leftEyeJoint.rotateX" 0;
+		
+		//RIGHT EYE
+		setAttr "rightEyeJoint.rotateX" 0;
+		setAttr "rightEyeTopLidJoint.rotateX" 0;
+		setAttr "rightEyeBottomLidJoint.rotateX" 0;
+		setDrivenKeyframe -cd rightEyeJoint.rotateX rightEyeTopLidJoint.rotateX rightEyeBottomLidJoint.rotateX;
+		
+		setAttr "rightEyeJoint.rotateX" -30;
+		setAttr "rightEyeTopLidJoint.rotateX" -20;
+		setAttr "rightEyeBottomLidJoint.rotateX" -20;
+		setDrivenKeyframe -cd rightEyeJoint.rotateX rightEyeTopLidJoint.rotateX rightEyeBottomLidJoint.rotateX;
+		
+		setAttr "rightEyeJoint.rotateX" 30;
+		setAttr "rightEyeTopLidJoint.rotateX" 15;
+		setAttr "rightEyeBottomLidJoint.rotateX" 25;
+		setDrivenKeyframe -cd rightEyeJoint.rotateX rightEyeTopLidJoint.rotateX rightEyeBottomLidJoint.rotateX;
+		
+		setAttr "rightEyeJoint.rotateX" 0;
+		
+	//EYE LOOK AT EXPRESSION
+	expression -n "eyeLookAtExpression" -s ("leftEyeJoint.rotateX = eyeLookAtControl.translateY*-30;"
+											+ "rightEyeJoint.rotateX = eyeLookAtControl.translateY*-30;"
+											+ "leftEyeJoint.rotateY = eyeLookAtControl.translateX*45;"
+											+ "rightEyeJoint.rotateY = eyeLookAtControl.translateX*45;"
+											+ "zuckafaBlendshapes.leftEyeTugIn = eyeLookAtControl.translateX*-1;"
+											+ "zuckafaBlendshapes.rightEyeTugIn = eyeLookAtControl.translateX;");
+
+	//BROWS
+	expression -n "browExpression" -s ("zuckafaBlendshapes.innerBrowUp = clamp (0,1,innerBrowControl.translateY);"
+										+ "zuckafaBlendshapes.innerBrowDown = clamp (0,1,innerBrowControl.translateY*-1);"
+										+ "zuckafaBlendshapes.leftBrowOuterUp = leftBrowControl.translateY;"
+										+ "zuckafaBlendshapes.rightBrowOuterUp = rightBrowControl.translateY;");
+	
+	//HEAD
+	expression -n "headExpression" -s ("head.rotateX = headControl.rotateY;"
+										+ "head.rotateY = headControl.rotateZ *-1;"
+										+ "head.rotateZ = headControl.rotateX *-1;");
+	
+	//USER FEEDBACK
+	print "Zuckafa's Face UI Connected.";
+}

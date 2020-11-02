@@ -1,0 +1,81 @@
+//								CGToolkit Attach Control Curve
+//									cgTkAttachCtrl.mel
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved.
+//								www.cgtoolkit.com
+//		
+//				Description:
+//
+//				This script was designed to attach a controller object
+//				to a joint. After properly orient constraining the joint,
+//				the script will attach the controller into the heirarchy.
+//
+//
+//				Directions:
+//				1.) Select controller.
+//				2.) Shift select joint.
+//				3.) Execute 'cgTkAttachCtrl;' from the command line.
+//
+
+global proc cgTkAttachCtrl()
+{
+	string $sel[] = `ls -sl`;
+	string $controlObj = $sel[0];
+	string $joint = $sel[1];
+	
+	if ( (! `objectType -isType "joint" $sel[1]`) || ($sel[0] == "") )
+	{
+		
+		warning "Please select a controller object, then shift select a joint.";
+		
+	}else
+	{
+		//Freese the transformations on the controller
+		select $controlObj;
+		FreezeTransformations;
+		performFreezeTransformations(0);
+		
+		//Snap Pivot to Joint
+		float $worldSpaceOfJoint[] = `joint -q -a -p $joint`;
+		xform -a -ws -rotatePivot $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] $controlObj;
+		
+		//Create Null
+		string $nameOfGroup = `group -em`;
+		$nameOfGroup = `rename $nameOfGroup ($controlObj + "Null")`;
+		
+		//Snap Null to Joint
+		move -rpr $worldSpaceOfJoint[0] $worldSpaceOfJoint[1] $worldSpaceOfJoint[2] $nameOfGroup;
+		
+		//Orient the Null to the Joint
+		delete `orientConstraint -offset 0 0 0 -weight 1 $joint $nameOfGroup `;
+		
+		//Parent the control object under the null
+		parent $controlObj $nameOfGroup;
+		
+		//Freeze xforms on control again
+		select $controlObj;
+		FreezeTransformations;
+		performFreezeTransformations(0);
+		
+		//Orient constrain the joint to the curve.
+		orientConstraint -offset 0 0 0 -weight 1 $controlObj $joint ;
+		
+		//Parent constrain the null into the heirarchy
+		select $joint;
+		string $nameOfParentJoint[] = `pickWalk -d up`;
+		
+		if ($nameOfParentJoint[0] == $joint)
+		{
+			warning "Controller was setup, but it was not parent constrained into heirarchy. (Possibly root a joint?)";
+		}else
+		{
+			if(!`objectType -isType "joint" $nameOfParentJoint[0]`)
+			{
+				warning "Controller was setup, but it was not parent constrained into heirarchy. (Possibly root a joint?)";
+			}else
+			{
+				parentConstraint -mo -weight 1 $nameOfParentJoint[0] $nameOfGroup;
+			}
+		}
+	}
+}

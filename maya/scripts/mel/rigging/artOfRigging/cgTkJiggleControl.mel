@@ -1,0 +1,38 @@
+//-----------------------------------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+//	SCRIPT:	cgTkJiggleControl.mel
+//	AUTHOR:	Oleg Alexander
+//			oleg@topsoilarts.com
+//	VERSION:	1.0
+//
+//	DESCRIPTION: This spript creates an attribute to control the Goal Smoothness of multuple Soft Bodies.
+//
+//	HOW TO USE:	Select the control object first and then all your Soft Bodies. Execute "cgTkJiggleControl".
+//
+//-----------------------------------------------------------------------------------------------------//	
+//-----------------------------------------------------------------------------------------------------//
+
+global proc cgTkJiggleControl()
+{
+string $selection[] = `ls -sl`;
+string $controlObject = $selection[0];
+
+//If Jiggle Amount attribute already exists, delete it
+if (`attributeExists "jiggleAmount" $controlObject`) {
+
+       deleteAttr -at jiggleAmount $controlObject;
+
+   }
+
+//Add the Jiggle Amount attribute to the control object
+addAttr -keyable true -ln jiggleAmount -at double -min 0 -max 100 -dv 3 $controlObject;
+
+//Connect the Jiggle Amount attribute to the Goal Smoothness of the Soft Body Particle Shape nodes
+for($x = 1; $x < size($selection); $x++)
+{
+	
+	connectAttr -force ($controlObject + ".jiggleAmount") ($selection[$x] + "ParticleShape.goalSmoothness");
+
+}
+
+}

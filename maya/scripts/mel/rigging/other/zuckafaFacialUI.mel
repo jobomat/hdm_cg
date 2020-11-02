@@ -1,0 +1,314 @@
+//								Zuckafa Facial UI
+//
+//				Copyright © 2004 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//				Description:
+//				-This script will create a user interface for the
+//				animator to use with a creature.
+//				-It can be easily adapted to fit your own creatures.
+//				-Check the video tutorials on how to use.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+// Stores the directory location of current library file in use.
+global string $poseLibraryInUse;
+$poseLibraryInUse = "X";
+
+/////////////////////////////////////////////////////////////////////////////////////
+//								ADD POSE TO CURRENT LIBRARY PROCEDURE
+proc addPoseToLibrary ()
+{
+	// Current library that is loaded.
+	global string $poseLibraryInUse;
+	
+	//Check to see if the user has loaded a library.
+	if ($poseLibraryInUse == "X")
+	{
+		warning "You must load a library before saving new poses.";
+	} else 
+	{
+		
+	//Prompt user for name of pose
+		promptDialog -message "Enter name of pose:" -button "Ok" -defaultButton "Ok";
+		string $nameOfPose = `promptDialog -query -text`;
+	
+	//Prompt user to find icon for pose
+		//Get the current project folder directory
+		$currentProject = `workspace -q -rd`;
+		$currentProject = ($currentProject + "*.xpm");
+		
+		//Prompt user to find the file to load
+		string $iconLocation = `fileDialog -dm $currentProject`;
+	
+	//Construct button command
+		string $poseButtonCmd;
+		float $sliderValues[];
+		
+		//Put all slider values in a float array
+		$sliderValues[0]= `getAttr jawControl.tx`;
+		$sliderValues[1]= `getAttr jawControl.ty`;
+		$sliderValues[2]= `getAttr bottomLipRightControl.ty`;
+		$sliderValues[3]= `getAttr topLipRightControl.ty`;
+		$sliderValues[4]= `getAttr bottomLipLeftControl.ty`;
+		$sliderValues[5]= `getAttr topLipLeftControl.ty`;
+		$sliderValues[6]= `getAttr mouthControl.tx`;
+		$sliderValues[7]= `getAttr tongueSideControl.tx`;
+		$sliderValues[8]= `getAttr tongueTipControl.tx`;
+		$sliderValues[9]= `getAttr tongueTipControl.ty`;
+		$sliderValues[10]= `getAttr rightCheekControl.tx`;
+		$sliderValues[11]= `getAttr leftCheekControl.tx`;
+		$sliderValues[12]= `getAttr rightNoseControl.ty`;
+		$sliderValues[13]= `getAttr leftNoseControl.ty`;
+		$sliderValues[14]= `getAttr leftSquintControl.tx`;
+		$sliderValues[15]= `getAttr rightSquintControl.tx`;
+		$sliderValues[16]= `getAttr rightBottomLidControl.ty`;
+		$sliderValues[17]= `getAttr leftBottomLidControl.ty`;
+		$sliderValues[18]= `getAttr rightTopLidControl.ty`;
+		$sliderValues[19]= `getAttr leftTopLidControl.ty`;
+		$sliderValues[20]= `getAttr eyeLookAtControl.tx`;
+		$sliderValues[21]= `getAttr eyeLookAtControl.ty`;
+		$sliderValues[22]= `getAttr innerBrowControl.ty`;
+		$sliderValues[23]= `getAttr innerBrowControl.browSqueeze`;
+		$sliderValues[24]= `getAttr leftBrowControl.ty`;
+		$sliderValues[25]= `getAttr rightBrowControl.ty`;
+		$sliderValues[26]= `getAttr headControl.rx`;
+		$sliderValues[27]= `getAttr headControl.ry`;
+		$sliderValues[28]= `getAttr headControl.rz`;
+		$sliderValues[29]= `getAttr mouthSyncControl.ty`;
+		$sliderValues[30]= `getAttr mouthSyncControl.frown`;
+		$sliderValues[31]= `getAttr mouthSyncControl.asymetric`;
+		
+		
+		//Construct the string
+		$poseButtonCmd = ("setAttr jawControl.tx " + $sliderValues[0] + ";")
+						+ ("setAttr jawControl.ty " + $sliderValues[1] + ";")
+						+ ("setAttr bottomLipRightControl.ty " + $sliderValues[2] + ";")
+						+ ("setAttr topLipRightControl.ty " + $sliderValues[3] + ";")
+						+ ("setAttr bottomLipLeftControl.ty " + $sliderValues[4] + ";")
+						+ ("setAttr topLipLeftControl.ty " + $sliderValues[5] + ";")
+						+ ("setAttr mouthControl.tx " + $sliderValues[6] + ";")
+						+ ("setAttr tongueSideControl.tx " + $sliderValues[7] + ";")
+						+ ("setAttr tongueTipControl.tx " + $sliderValues[8] + ";")
+						+ ("setAttr tongueTipControl.ty " + $sliderValues[9] + ";")
+						+ ("setAttr rightCheekControl.tx " + $sliderValues[10] + ";")
+						+ ("setAttr leftCheekControl.tx " + $sliderValues[11] + ";")
+						+ ("setAttr rightNoseControl.ty " + $sliderValues[12] + ";")
+						+ ("setAttr leftNoseControl.ty " + $sliderValues[13] + ";")
+						+ ("setAttr leftSquintControl.tx " + $sliderValues[14] + ";")
+						+ ("setAttr rightSquintControl.tx " + $sliderValues[15] + ";")
+						+ ("setAttr rightBottomLidControl.ty " + $sliderValues[16] + ";")
+						+ ("setAttr leftBottomLidControl.ty " + $sliderValues[17] + ";")
+						+ ("setAttr rightTopLidControl.ty " + $sliderValues[18] + ";")
+						+ ("setAttr leftTopLidControl.ty " + $sliderValues[19] + ";")
+						+ ("setAttr eyeLookAtControl.tx " + $sliderValues[20] + ";")
+						+ ("setAttr eyeLookAtControl.ty " + $sliderValues[21] + ";")
+						+ ("setAttr innerBrowControl.ty " + $sliderValues[22] + ";")
+						+ ("setAttr innerBrowControl.browSqueeze " + $sliderValues[23] + ";")
+						+ ("setAttr leftBrowControl.ty " + $sliderValues[24] + ";")
+						+ ("setAttr rightBrowControl.ty " + $sliderValues[25] + ";")
+						+ ("setAttr headControl.rx " + $sliderValues[26] + ";")
+						+ ("setAttr headControl.ry " + $sliderValues[27] + ";")
+						+ ("setAttr headControl.rz " + $sliderValues[28] + ";")
+						+ ("setAttr mouthSyncControl.ty " + $sliderValues[29] + ";")
+						+ ("setAttr mouthSyncControl.frown " + $sliderValues[30] + ";")
+						+ ("setAttr mouthSyncControl.asymetric " + $sliderValues[31] + ";");
+		
+	//Write new pose to file
+		float $fildID;
+		$fileID = fopen($poseLibraryInUse,"a");
+		fprint($fileID,($nameOfPose + "\r\n"));
+		fprint($fileID,($iconLocation + "\r\n"));
+		fprint($fileID,($poseButtonCmd + "\r\n"));
+		fclose($fileID);
+
+	//Create add-pose button
+		iconTextButton -parent "expressionLibraryLayout" -style "iconAndTextVertical" -image1 $iconLocation -label $nameOfPose -c $poseButtonCmd;
+		print ("Pose Added To : " + $poseLibraryInUse + "\n");
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//							LOAD POSE FILE INTO LIBRARY PROCEDURE
+proc loadPoseLibrary ()
+{
+	global string $poseLibraryInUse;
+	
+	//READ A POSE FILE AND ADD IT TO THE LIBARY
+	
+	//Get the current project folder directory
+	$currentProject = `workspace -q -rd`;
+	$currentProject = ($currentProject + "*.txt");
+	
+	//Prompt user to find the file to load
+	string $fileLocation = `fileDialog -dm $currentProject`;
+	
+	//Open the file for reading ("r")
+	print ("Opened : " + $fileLocation + "\n");
+	$fileID = `fopen $fileLocation "r"`;
+	
+	
+	//Step through each line in the file and create necessary buttons.
+	string $nextLine = `fgetline $fileID`;
+	
+	while (size($nextLine) > 0)
+	{
+		int $i = 1;
+		string $currentPoseName;
+		string $currentIconName;
+		string $currentButtonCmd;
+		
+			for ($i=1; $i<=3; $i++)
+			{
+				if ($i==1)
+				{
+					$currentPoseName = $nextLine;
+					$currentPoseName = `substring $currentPoseName 1 (size($currentPoseName) - 1)`;
+				} else if ($i==2)
+				{
+					$currentIconName = $nextLine;
+					$currentIconName = `substring $currentIconName 1 (size($currentIconName) - 1)`;
+				} else if ($i==3)
+				{
+					$currentButtonCmd = $nextLine;
+					$currentButtonCmd = `substring $currentButtonCmd 1 (size($currentButtonCmd) - 1)`;
+				}
+				$nextLine = `fgetline $fileID`;
+			}
+		iconTextButton -parent "expressionLibraryLayout" -style "iconAndTextVertical" -image1 $currentIconName -label $currentPoseName -c $currentButtonCmd;
+	}
+	
+	fclose $fileID;
+	//Enlarge the scrollLayout to make room for the buttons.
+	scrollLayout -e -h 100 ("CustomLibrary");
+	print "Pose Library Loaded!\n";
+	$poseLibraryInUse = $fileLocation;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//Will set a key on the mouth controllers only
+proc keyMouth()
+{
+	setKeyframe -breakdown 0 -hierarchy none -controlPoints 0 -shape 0 {"jawControl", "bottomLipRightControl", "topLipRightControl", "bottomLipLeftControl", "topLipLeftControl", "smileFrown", "mouthControl", "tongueSideControl", "tongueTipControl", "rightCheekControl", "leftCheekControl", "mouthSyncControl"};
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//Will set a key on all the face controllers
+proc keyFace()
+{
+	setKeyframe -breakdown 0 -hierarchy none -controlPoints 0 -shape 0 {"jawControl", "bottomLipRightControl", "topLipRightControl", "bottomLipLeftControl", "topLipLeftControl", "smileFrown", "mouthControl", "tongueSideControl", "tongueTipControl", "rightCheekControl", "leftCheekControl", "mouthSyncControl", "rightNoseControl", "leftNoseControl", "leftSquintControl", "rightSquintControl", "rightBottomLidControl", "leftBottomLidControl", "rightTopLidControl", "leftTopLidControl", "eyeLookAtControl", "innerBrowControl", "rightBrowControl", "leftBrowControl", "headControl"};
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//Will reset all the facial controllers to zero
+proc resetFace()
+{
+		setAttr jawControl.tx 0 ;
+		setAttr jawControl.ty 0 ;
+		setAttr bottomLipRightControl.ty 0 ;
+		setAttr topLipRightControl.ty 0 ;
+		setAttr bottomLipLeftControl.ty 0 ;
+		setAttr topLipLeftControl.ty 0 ;
+		setAttr mouthControl.tx 0 ;
+		setAttr tongueSideControl.tx 0 ;
+		setAttr tongueTipControl.tx 0 ;
+		setAttr tongueTipControl.ty 0 ;
+		setAttr rightCheekControl.tx 0 ;
+		setAttr leftCheekControl.tx 0 ;
+		setAttr rightNoseControl.ty 0 ;
+		setAttr leftNoseControl.ty 0 ;
+		setAttr leftSquintControl.tx 0 ;
+		setAttr rightSquintControl.tx 0 ;
+		setAttr rightBottomLidControl.ty 0 ;
+		setAttr leftBottomLidControl.ty 0 ;
+		setAttr rightTopLidControl.ty 0 ;
+		setAttr leftTopLidControl.ty 0 ;
+		setAttr eyeLookAtControl.tx 0 ;
+		setAttr eyeLookAtControl.ty 0 ;
+		setAttr innerBrowControl.ty 0 ;
+		setAttr innerBrowControl.browSqueeze 0 ;
+		setAttr leftBrowControl.ty 0 ;
+		setAttr rightBrowControl.ty 0 ;
+		setAttr headControl.rx  0 ;
+		setAttr headControl.ry 0 ;
+		setAttr headControl.rz 0 ;
+		setAttr mouthSyncControl.ty 0 ;
+		setAttr mouthSyncControl.frown 0 ;
+		setAttr mouthSyncControl.asymetric 0 ;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+//Will reset the mouth controllers to zero
+proc resetMouth()
+{
+	setAttr jawControl.tx 0 ;
+	setAttr jawControl.ty 0 ;
+	setAttr bottomLipRightControl.ty 0 ;
+	setAttr topLipRightControl.ty 0 ;
+	setAttr bottomLipLeftControl.ty 0 ;
+	setAttr topLipLeftControl.ty 0 ;
+	setAttr mouthControl.tx 0 ;
+	setAttr tongueSideControl.tx 0 ;
+	setAttr tongueTipControl.tx 0 ;
+	setAttr tongueTipControl.ty 0 ;
+	setAttr rightCheekControl.tx 0 ;
+	setAttr leftCheekControl.tx 0 ;
+	setAttr mouthSyncControl.ty 0 ;
+	setAttr mouthSyncControl.frown 0 ;
+	setAttr mouthSyncControl.asymetric 0 ;
+}
+
+global proc zuckafaFacialUI ()
+{
+	////////////////////////////////////////////////////////////////////////////////////
+	//								MAIN WINDOW
+	if (`window -q -ex creatureUI`) deleteUI creatureUI;
+	
+	window -w 650 -h 600 -title "Facial GUI" creatureUI;
+		paneLayout -paneSize 3 100 30 -configuration "top3" "facialPaneLayout";
+	
+			// THIS IS THE FACIAL INTERFACE PANEL
+			modelPanel -cam "faceCam" -menuBarVisible 0 -l facialInterfacePanel;
+		setParent..;
+	
+			// THIS IS THE FACIAL CAMERA PANEL
+			modelPanel -cam "UICam" -menuBarVisible 0 -l facialCamPanel;
+		setParent..;
+	
+			// THE LIBRARY LAYOUTS
+			columnLayout ;
+				rowColumnLayout -nc 6;
+					button -bgc .1 .8 .1 -c "keyFace;" -label "Key Face";
+					button -bgc .1 .8 .1 -c "keyMouth;" -label "Key Mouth";
+					button -bgc .94 .035 .164 -c "resetFace;"-label "Reset Face";
+					button -bgc .94 .035 .164 -c "resetMouth;"-label "Reset Mouth";
+					button -label "Load Pose File..." -c ("loadPoseLibrary");
+					button -label "Save Pose to File..." -c ("addPoseToLibrary");
+				setParent..;
+				tabLayout;
+					// Expression Library Tab
+					scrollLayout -horizontalScrollBarThickness 0 "CustomLibrary";
+						rowColumnLayout -nc 6 "expressionLibraryLayout";
+						text "Custom Expressions: ";
+						text " ";
+						text " ";
+						text " ";
+						text " ";
+						text " ";
+					setParent..; 
+				setParent..;
+					// Visime Library Tab
+					scrollLayout -horizontalScrollBarThickness 0 "VisimeLibrary";
+						rowColumnLayout -nc 4 "visimeLibraryLayout";
+						text "Visimes: ";
+					setParent..; 
+				setParent..;
+					// Clips Library Tab
+					scrollLayout -horizontalScrollBarThickness 0 "ClipsLibrary";
+						rowColumnLayout -nc 6 "clipsLibraryLayout";
+						text "Clips: ";
+					setParent..; 
+				setParent..;
+			setParent..;
+	showWindow creatureUI;
+}

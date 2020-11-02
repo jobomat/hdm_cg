@@ -1,0 +1,269 @@
+//							cgTkClothTools.mel
+//
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//							- Cloth Tools -
+//			This script includes several tools to help a setup
+//			artist work with Maya Cloth.
+//
+//			Directions:
+//			- Execute 'cgTkClothTools' from the command line.
+//
+//			Requires:
+//			- cgTkShotSculpt.mel (for shot sculpt button)
+//
+
+//Procedure to refresh the scene manager
+global proc cgTkRefreshClothSceneManager()
+{
+	//Refresh solver list
+	textScrollList -e -removeAll clothSolverScrollList;
+	//Find all solvers
+	string $cpSolvers[] = `ls -type cpClothSolver`;
+	for ($obj in $cpSolvers)
+	{
+		textScrollList -e -append $obj clothSolverScrollList;
+	}
+	
+	//Refresh properties list
+	textScrollList -e -removeAll clothPropertiesScrollList;
+	//Find all cloth properties
+	string $cpProperties[] = `ls -type cpClothProperty`;
+	for ($obj in $cpProperties)
+	{
+		textScrollList -e -append $obj clothPropertiesScrollList;
+	}
+	
+	//Refresh caches list
+	textScrollList -e -removeAll clothCachesScrollList;
+	//Find all cloth properties
+	string $cpCaches[] = `ls -type cpCacheNode`;
+	for ($obj in $cpCaches)
+	{
+		textScrollList -e -append $obj clothCachesScrollList;
+	}
+	
+	//Refresh collision obj list
+	textScrollList -e -removeAll collisionObjScrollList;
+	//Find all collision objects
+	string $allMeshes[] = `ls -type mesh`;
+	for ($obj in $allMeshes)
+	{
+		if (`attributeExists "collisionOffset" $obj`)
+			textScrollList -e -append $obj collisionObjScrollList;
+	}
+	
+	//Refresh cloth obj list
+	textScrollList -e -removeAll clothObjScrollList;
+	string $solverConnections[];
+	for ($solver in $cpSolvers)
+	{
+		$solverConnections = `listConnections -s 0 $solver`;
+		$solverConnections = stringArrayRemoveDuplicates($solverConnections);
+		print $solverConnections;
+		for ($obj in $solverConnections)
+		{
+			string $shapeNode[] = `listRelatives -s $obj`;
+			if (`objectType -isType "mesh" $shapeNode[0]`)
+			textScrollList -e -append $obj clothObjScrollList;
+		}
+	}
+}
+
+global proc cgTkMeshSize()
+{
+	string $sel[] = `ls -sl`;
+	
+	//Error Checking (something selected)
+	if ($sel[0] == "")
+	{
+		error "Please select a mesh. No action taken.";
+	}
+	
+	string $shape[] = `listRelatives -s $sel[0]`;
+	if (!`objectType -isType "mesh" $shape[0]`)
+	{
+		error "Object must be a polygonal mesh.";
+	}
+	
+	//Calculate height of mesh
+	vector $top = `getAttr ($sel[0] + ".boundingBoxMax")`;
+	vector $bottom = `getAttr ($sel[0] + ".boundingBoxMin")`;
+	float $distance = mag($top - $bottom);
+	
+	//Store height into interface
+	floatFieldGrp -e -value1 $distance meshHeightFloatField;
+}
+
+global proc cgTkCalculateSolverScale()
+{
+	float $mayaSize = `floatFieldGrp -q -value1 meshHeightFloatField`;
+	float $realSize = `floatFieldGrp -q -value1 realHeightFloatField`;
+	if (($mayaSize != 0) && ($realSize != 0))
+	{
+		float $solverScale = $realSize / $mayaSize;
+		floatFieldGrp -e -value1 $solverScale solverScaleFloatField;
+	}else
+	{
+		warning "Size cannot equal zero.";
+	}
+}
+
+global proc cgTkGenerateBatchCmd()
+{
+	//Determine start and end frame
+	float $startFrame;
+	float $endFrame;
+	
+	if (`radioButtonGrp -q -sl clothFramesRadioButtonGrp` == 1)
+	{
+		//From int fields
+		$startFrame = `intFieldGrp -q -v1 clothFrameField`;
+		$endFrame = `intFieldGrp -q -v2 clothFrameField`;
+	}else
+	{
+		//From time slider
+		$startFrame = `playbackOptions -q -min`;
+		$endFrame = `playbackOptions -q -max`;
+	}
+		
+	//Generate Cloth Cache Batch Command
+	string $sceneLocation = `file -q -sceneName`;
+	//Print Linux Batch Command
+	print "This is the Unix/Linux Batch Command: \n";
+	print ("maya -batch -file " + $sceneLocation + " -command \"cpRunBatch " + $startFrame +" "+ $endFrame +"\"\n");
+	//Print Windows Batch Command
+	print "This is the Windows Batch Command: \n";
+	print ("mayabatch.exe -batch -file \"" + $sceneLocation + "\" -command \"cpRunBatch " + $startFrame + " " + $endFrame + "\"\n");
+	system "start cmd.exe";
+	print "Check Script Editor for Batch Commands.";
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//								MAIN WINDOW
+/////////////////////////////////////////////////////////////////////////////////////////
+
+global proc cgTkClothTools ()
+{
+	if (`window -q -ex clothToolsWindow`) deleteUI clothToolsWindow;
+	
+	//Main Window
+	window -title "CG Toolkit - Cloth Tools v1.0" -w 340 -h 330 -iconName "Cloth Tools" clothToolsWindow;
+	
+		//Scroll Layout
+		scrollLayout -hst 0;
+	
+			//Main Column Layout
+			columnLayout;
+			
+				//Scene Manager
+				frameLayout -w 300 -label "Scene Manager" 
+							-labelAlign "center" 
+							-collapsable 1 -collapse 0
+							-marginHeight 5 -marginWidth 5
+							-borderStyle etchedIn;
+					rowColumnLayout -nc 2 -cw 1 140 -cw 2 140;
+						columnLayout;
+							text "Properties :";
+							textScrollList 	-w 135 -numberOfRows 4
+											-allowMultiSelection  1
+											-selectCommand ("select `textScrollList -q -selectItem clothPropertiesScrollList`")
+											clothPropertiesScrollList;
+					setParent..;
+						columnLayout;
+							text "Solvers :";
+							textScrollList -w 135 -numberOfRows 4 
+											-allowMultiSelection  1
+											-selectCommand ("select `textScrollList -q -selectItem clothSolverScrollList`")
+											clothSolverScrollList;
+					setParent..;
+						columnLayout;
+							text "Caches :";
+							textScrollList -w 135 -numberOfRows 4 
+											-allowMultiSelection  1
+											-selectCommand ("select `textScrollList -q -selectItem clothCachesScrollList`")
+											clothCachesScrollList;
+					setParent..;
+						columnLayout;
+							text "Collision Objects :";
+							textScrollList -w 135 -numberOfRows 4
+											-allowMultiSelection  1
+											-selectCommand ("select `textScrollList -q -selectItem collisionObjScrollList`")
+											collisionObjScrollList;
+					setParent..;
+						columnLayout;
+							text "Cloth Objects :";
+							textScrollList -w 135 -numberOfRows 4 
+											-allowMultiSelection  1
+											-selectCommand ("select `textScrollList -q -selectItem clothObjScrollList`")
+											clothObjScrollList;
+					setParent..;
+						columnLayout -adj true;
+							text " ";
+							button -label "Refresh Lists" -c ("cgTkRefreshClothSceneManager") ;
+					setParent..;
+				setParent..;
+				setParent..;
+			
+				//Solver Scale Calculator
+				frameLayout -w 300 -label "Calculate Solver Scale:" 
+							-labelAlign "center" 
+							-collapsable 1 -collapse 1 
+							-borderStyle etchedIn
+							-marginHeight 5 -marginWidth 5;
+					columnLayout -adj true;
+						rowColumnLayout -nc 2 -cw 1 185 -cw 2 100;
+						floatFieldGrp 	-label "Scene Size (cm):" 
+										-cw 1 100 -cw 2 80
+										meshHeightFloatField;
+						button -label "1. Load Mesh" -c ("cgTkMeshSize");
+						floatFieldGrp 	-label "Real Size (cm):" 
+										-cw 1 100 -cw 2 80
+										realHeightFloatField;
+						text "2. Enter Real Size";
+						
+						floatFieldGrp 	-label "Solver Scale :" -enable 0 
+										-cw 1 100 -cw 2 80
+										solverScaleFloatField;
+						button -label "3. Calculate" -c ("cgTkCalculateSolverScale");
+					setParent..;
+				setParent..;
+			setParent..;
+			
+				//Bake Cloth
+				frameLayout -w 300 -label "Bake/Cache Cloth:" 
+							-labelAlign "center" 
+							-collapsable 1 -collapse 1 
+							-borderStyle etchedIn
+							-marginHeight 5  -marginWidth 5;
+					columnLayout -adj 1;
+					radioButtonGrp 	-numberOfRadioButtons 2 
+									-label "Frames: " 
+									-labelArray2 "Start/End" "Time Slider"
+									-ad3 true
+									-cl3 "center" "left" "left"
+									-sl 2
+									-cc1 ("intFieldGrp -e -enable 1 clothFrameField")
+									-cc2 ("intFieldGrp -e -enable 0 clothFrameField")
+									clothFramesRadioButtonGrp;
+					intFieldGrp 	-numberOfFields 2
+									-label "Start   "
+									-extraLabel "End"
+									-ad4 true
+									-cl4 "right" "left" "left" "left"
+									-enable 0
+									clothFrameField;
+					separator -h 20;
+					button -label "Generate Maya Cloth Batch Command" -c ("cgTkGenerateBatchCmd") ;
+					button 	-label "Use Shot Sculpt..." -c ("cgTkShotSculpt") ;
+				setParent..;
+			setParent..;
+
+	//Show Main Window Command
+	showWindow clothToolsWindow;
+	
+	//Refresh Scene Manager
+	cgTkRefreshClothSceneManager;
+}

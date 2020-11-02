@@ -1,0 +1,350 @@
+global proc shelf_SS3 () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -align "center" 
+        -label "inv" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "inv" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3TargetWgts\nss3TargetWgts.inverse()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -align "center" 
+        -label "cop" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "cop" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3TargetWgts\nss3TargetWgts.copyWgtsUI()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -align "center" 
+        -label "tap" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "tap" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3TargetWgts\nss3TargetWgts.taper()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "create an eye rig" 
+        -align "center" 
+        -label "eye" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "eye" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3EyeRig\nss3EyeRig.eye( prefix = ss3EyeRig.ui( winTitle = 'ss3JointLids' ).prefix )" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create a joint-based eyelid rig" 
+        -align "center" 
+        -label "lidJ" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "lidJ" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3EyeRig\nss3EyeRig.joints( prefix = ss3EyeRig.ui( winTitle = 'ss3JointLids' ).prefix )" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create a shape-based eyelid network" 
+        -align "center" 
+        -label "lidS" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "lidS" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3EyeRig\nss3EyeRig.shapes( prefix = ss3EyeRig.ui( winTitle = 'ss3JointLids' ).prefix )\n" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Open the sticky lips ui" 
+        -align "center" 
+        -label "lips" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "lips" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3StickyLips\nss3StickyLips.ui()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create a buffer network" 
+        -align "center" 
+        -label "buf" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "buf" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3Utls\nss3Utls.makeBuffer()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Open the slider ui" 
+        -align "center" 
+        -label "sld" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "sld" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3Sliders\nss3Sliders.ui()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "blendWeighted input[1]/weight[0] swap" 
+        -align "center" 
+        -label "bws" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "bws" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3Utls\nss3Utls.bwSwap()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create X, Y, and Z only versions of a shape" 
+        -align "center" 
+        -label "xyz" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "xyz" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3Utls\nss3Utls.xyz()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Pin objects to the nearest point on a  mesh" 
+        -align "center" 
+        -label "pin" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "pin" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3Pin\nss3Pin.pin()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Parents of selected objects will move opposite" 
+        -align "center" 
+        -label "neg" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "neg" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3Pin\nss3Pin.negParent()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Bake out blendShape weights as objects" 
+        -align "center" 
+        -label "bake" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "bake" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3TargetWgts\nss3TargetWgts.bake()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Set up lattice teeth limits" 
+        -align "center" 
+        -label "thLim" 
+        -labelOffset 0
+        -font "tinyBoldLabelFont" 
+        -imageOverlayLabel "thLim" 
+        -image "pythonFamily.xpm" 
+        -image1 "pythonFamily.xpm" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import ss3ThLim\nss3ThLim.go( axis = 'Y' )" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+
+} 

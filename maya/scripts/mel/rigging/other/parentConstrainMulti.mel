@@ -1,0 +1,1 @@
+//1.) Select an object, then shift select any number of targets.//2.) Execute parentConstrainMulti; to create constraints.global proc parentConstrainMulti(){	string $sel[] = `ls -sl`;		if ($sel[0] != "")	{		for ($obj in $sel)		{							if ($obj != $sel[0])			{				parentConstraint -mo -weight 1 $sel[0] $obj;			}						}			}}

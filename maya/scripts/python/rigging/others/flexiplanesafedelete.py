@@ -1,0 +1,2 @@
+from flexiplaneutils import flexiplane_safe_delete 
+flexiplane_safe_delete()

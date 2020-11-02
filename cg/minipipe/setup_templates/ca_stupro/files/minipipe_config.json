@@ -1,0 +1,163 @@
+{
+    "project_base_path": "",
+    "maya_project_dir": "3d",
+    "minipipe_dir": "pipeline/minipipe",
+    "scene_types": {
+        "props": {
+            "nice_name": "Prop",
+            "icon": "emptyProp.png"
+        },
+        "chars": {
+            "nice_name": "Character",
+            "icon": "emptyChar.png"
+        },
+        "sets": {
+            "nice_name": "Set",
+            "icon": "emptySet.png"
+        },
+        "shots": {
+            "nice_name": "Shot",
+            "icon": "emptyShot.png",
+            "start_dept": "ani"
+        },
+        "xtras": {
+            "nice_name": "Extras",
+            "start_dept": "rnd"
+        }
+    },
+    "depts":{
+        "mod": {
+            "nice_name": "Modeling",
+            "color": [0.09, 0.25, 0.37]
+        },
+        "rig": {
+            "nice_name": "Rigging",
+            "color": [0.125, 0.386, 0.605]
+        },
+        "shd":{
+            "nice_name": "Shading",
+            "color": [0.961, 0.832, 0.359]
+        },
+        "ani":{
+            "nice_name": "Animation",
+            "color": [0.234, 0.679, 0.636]
+        },
+        "ren":{
+            "nice_name": "Rendering",
+            "color": [0.925, 0.332, 0.230]
+        },
+        "rnd":{
+            "nice_name": "RnD"
+        }
+    },
+    "actions": {
+        "in": {
+            "chars":{
+                "mod": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ],
+                "rig": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ],
+                "shd": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ]
+            },
+            "props":{
+                "mod": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ],
+                "shd": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ]
+            },
+            "sets":{
+                "mod": [
+                    "cg.maya.minipipe.actions.load_any_version",
+                    "cg.maya.minipipe.actions.create_reference"
+                ],
+                "shd": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ]
+            },
+            "shots":{
+                "ani": [
+                    "cg.maya.minipipe.actions.load_any_version",
+                    "cg.maya.minipipe.actions.create_reference"
+                ],
+                "ren": [
+                    "cg.maya.minipipe.actions.load_any_version",
+                    "cg.maya.minipipe.actions.create_reference"
+                ]
+            }
+        },
+        "out": {
+            "chars": {
+                "mod": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.create_rig_version"
+                ],
+                "rig": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.create_shd_version"
+                ],
+                "shd": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release"
+                ]
+            },
+            "props": {
+                "mod": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.create_shd_version"
+                ],
+                "shd": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release"
+                ]
+            },
+            "sets": {
+                "mod": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.create_shd_version"
+                ],
+                "shd": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release"
+                ]
+            },
+            "shots": {
+                "ani": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.create_cache"
+                ],
+                "ren": [
+                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.release"
+                ]
+            }
+        }
+    },
+    "env_var_name": "",
+    "image_resolution": [1920, 1080],
+    "framerate": 25,
+    "image_ratios": {
+        "Flat (1.85:1)  / 1998 x 1080": [1998, 1080],
+        "Scope (2.39:1) / 2048 x 858": [2048, 858],
+        "QuadHD (16:9)  / 1920 x 1080": [1920, 1080],
+        "Full Container / 2048 x 1080":[2048, 1080]
+    },
+    "fps_map": {
+        "game": 15,
+        "film": 24,
+        "pal": 25,
+        "ntsc": 30,
+        "show": 48,
+        "palf": 50,
+        "ntscf": 60
+    }
+}

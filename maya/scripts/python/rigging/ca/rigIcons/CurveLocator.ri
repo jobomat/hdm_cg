@@ -1,0 +1,4 @@
+CurveLocator
+CurveLocator
+[{"cmd": "", "childs": [{"cmd": "maya.cmds.curve( d=1, p=[(0.0,1.0,0.0),(0.0,-1.0,0.0),(0.0,0.0,0.0),(0.0,0.0,-1.0),(0.0,0.0,1.0),(0.0,0.0,0.0),(1.0,0.0,0.0),(-1.0,0.0,0.0)], k=[0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0] )", "childs": [], "type": "nurbsCurve", "name": "CurveLocator_ctrlShape"}], "type": "transform", "name": "CurveLocator_ctrl"}]
+1

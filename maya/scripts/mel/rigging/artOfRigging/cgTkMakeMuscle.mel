@@ -1,0 +1,326 @@
+//
+//              Copyright © 2005 CGTOOLKIT. All rights reserved
+//                              www.cgtoolkit.com
+//
+//                          - AUTO MUSCLE RIGGER -
+//          This script will automate the task of rigging a NURBS
+//          muscle surface to squash and stretch.
+//
+//          Directions:
+//          - Create three identical NURBS circles.
+//          - Place them at the origin, middle and insertion of the muscle.
+//          - Shift select the circles and hit the 'Make Muscle' button.
+//
+//          Basic Procedure:
+//          The circles are lofted together to form a NURBS surface. This is
+//          the muscle. The script then creates several locators that act as
+//          insertion and origin points. The relative distance between these
+//          two points will cause the muscle surface to bulge.
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//                              cgTkCreateMuscle
+/////////////////////////////////////////////////////////////////////////////////////////
+global proc cgTkCreateMuscle()
+{
+    //Get initial selection
+    string $sel[] = `ls -long -sl`;
+
+    //Store each curve name into it's own variable
+    string $originCurve = $sel[0];
+    string $middleCurve = $sel[1];
+    string $insertionCurve = $sel[2];
+
+    //Error checking to ensure proper selection
+    if (($sel[0] == "") || ($sel[1] == "") || ($sel[2] == "") )
+    {
+        warning "Please select three NURBS curves and try again";
+    }else
+    {
+        string $originShape[] = `listRelatives -path -s $sel[0]`;
+        string $middleShape[] = `listRelatives -path -s $sel[1]`;
+        string $insertionShape[] = `listRelatives -path -s $sel[2]`;
+
+        if ((!`objectType -isType "nurbsCurve" $originShape[0]`)
+            || (!`objectType -isType "nurbsCurve" $middleShape[0]`)
+            || (!`objectType -isType "nurbsCurve" $insertionShape[0]`))
+        {
+            warning "Muscle not created. Please select three nurbs curves and try again.";
+        }else
+        {
+            //Get the name of the muscle from the UI text field.
+            string $nameFromTextField = `textField -q -text nameOfMuscleField`;
+
+            if (`objExists $nameFromTextField`)
+            {
+                warning ("An object named '" + $nameFromTextField + "' already exists. Please enter a unique name for this muscle and try again.");
+            }else
+            {
+                //Rename the curves
+                $originCurve = `rename $originCurve ($nameFromTextField + "OriginCurve")`;
+                $middleCurve = `rename $middleCurve ($nameFromTextField + "BulgeCurve")`;
+                $insertionCurve = `rename $insertionCurve ($nameFromTextField + "InsertionCurve")`;
+
+                //Center Pivots on Curve
+                select $originCurve $middleCurve $insertionCurve;
+                CenterPivot;
+                makeIdentity -apply true -t 1 -r 1 -s 1;
+
+                //Find initial length of bulge curve
+                float $initialLength = `arclen $middleCurve`;
+
+                //Loft the curves together
+                string $nameOfMuscle[] = `loft -ch 1 -u 1 -c 0 -ar 0 -d 3 -ss 2 -rn 0 -po 0 -rsn true $originCurve $middleCurve $insertionCurve`;
+
+                //Rename muscle surface
+                $nameOfMuscle[0] = `rename $nameOfMuscle[0] $nameFromTextField`;
+
+                //Assign the muscle shader if the user wants to
+                if (`checkBox -q -value shaderCheckbox`)
+                {
+                    if (`objExists cgTkMuscleShader`)
+                    {
+                        select -r $nameOfMuscle[0];
+                        hyperShade -assign "cgTkMuscleShader";
+                    }else
+                    {
+                        string $result = `confirmDialog -title "Warning!"
+                                                        -message "No muscle shader was found. Would you like to create one?"
+                                                        -button "Yes" -button "No, don't apply a shader."
+                                                        -defaultButton "Yes"
+                                                        -cancelButton "No, don't apply a shader."
+                                                        -dismissString "No, don't apply a shader."`;
+                        if ($result == "Yes")
+                        {
+                            cgTkCreateMuscleShader;
+                            select -r $nameOfMuscle[0];
+                            hyperShade -assign "cgTkMuscleShader";
+                        }else
+                        {
+                            warning "Shader was not attached to muscle surface.";
+                        }
+                    }
+                }
+
+                //Rename loft node
+                $nameOfMuscle[1] = `rename $nameOfMuscle[1] ($nameFromTextField + "Loft")`;
+
+                //Create and position origin locator
+                float $worldSpaceOfPivot[] = `xform -ws -q -rp $originCurve`;
+                string $originLocator[] = `spaceLocator -p $worldSpaceOfPivot[0] $worldSpaceOfPivot[1] $worldSpaceOfPivot[2]`;
+                CenterPivot;
+                $originLocator[0] = `rename $originLocator[0] ($nameFromTextField + "_Origin")`;
+
+                //Create and position bulge locator
+                float $worldSpaceOfPivot[] = `xform -ws -q -rp $middleCurve`;
+                string $bulgeLocator[] = `spaceLocator -p $worldSpaceOfPivot[0] $worldSpaceOfPivot[1] $worldSpaceOfPivot[2]`;
+                CenterPivot;
+                $bulgeLocator[0] = `rename $bulgeLocator[0] ($nameFromTextField + "_Bulge")`;
+
+                //Create and position insertion locator
+                float $worldSpaceOfPivot[] = `xform -ws -q -rp $insertionCurve`;
+                string $insertionLocator[] = `spaceLocator -p $worldSpaceOfPivot[0] $worldSpaceOfPivot[1] $worldSpaceOfPivot[2]`;
+                CenterPivot;
+                $insertionLocator[0] = `rename $insertionLocator[0] ($nameFromTextField + "_Insertion")`;
+				
+                //Point constrain the bulge locator
+                pointConstraint -weight 1 $originLocator[0] $bulgeLocator[0];
+                pointConstraint -weight 1 $insertionLocator[0] $bulgeLocator[0];
+				
+                //Orient constrain the bulge locator
+                orientConstraint -mo -weight 1 $originLocator[0] $bulgeLocator[0];
+                orientConstraint -mo -weight 1 $insertionLocator[0] $bulgeLocator[0];
+                setAttr ($nameFromTextField + "_Bulge_orientConstraint1.interpType") 0;
+				
+                //Select and group the locators
+                select $originLocator[0] $bulgeLocator[0] $insertionLocator[0];
+                string $nameOfMuscleGroup = `group -n ($nameFromTextField + "MoveGroup")`;
+
+                //Lock and hide all attributes on the muscle surface
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".tx");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".ty");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".tz");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".rx");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".ry");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".rz");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".sx");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".sy");
+                setAttr -lock true -keyable false ($nameOfMuscle[0] + ".sz");
+                
+                //Add custom attributes to the muscle surface
+                addAttr -keyable true -ln bulge -at double  -min 0 -max 1000 -dv 1 $nameOfMuscle[0];
+                addAttr -keyable true -ln volumeEnvelope -at double  -min 0 -max 10 -dv 10 $nameOfMuscle[0];
+				addAttr -keyable true -ln originOrientWeight -at double  -min 0 -max 1 -dv 1 $nameOfMuscle[0];
+				addAttr -keyable true -ln insertionOrientWeight -at double  -min 0 -max 1 -dv 1 $nameOfMuscle[0];				
+
+                //Create the utility nodes
+                string $distNode = `shadingNode -asUtility distanceBetween`;
+                $distNode = `rename $distNode ($nameFromTextField + "DistanceBetween")`;
+                string $multiDivNode = `shadingNode -asUtility multiplyDivide`;
+                $multiDivNode = `rename $multiDivNode ($nameFromTextField + "MultiplyDivide")`;
+
+                //Set the multi/div node operation to 'divide'
+                setAttr ($multiDivNode + ".operation") 2;
+
+                //Create volume envelope groups
+                group -em -n ($nameFromTextField + "VolumeEnvelopeOnGroup");
+                group -em -n ($nameFromTextField + "VolumeEnvelopeOffGroup");
+                string $nameOfOnGroup = ($nameFromTextField + "VolumeEnvelopeOnGroup");
+                string $nameOfOffGroup = ($nameFromTextField + "VolumeEnvelopeOffGroup");
+	
+				//Scale constrain the bulge locator
+                string $nameOfScaleConstraint[] = `scaleConstraint -mo -weight 1 $nameOfOnGroup $bulgeLocator[0]`;
+                scaleConstraint -mo -weight 1 $nameOfOffGroup $bulgeLocator[0];
+				
+                //Find shape nodes for origin and insertion locators
+                string $originLocatorShape[] = `listRelatives -s $originLocator[0]`;
+                string $insertionLocatorShape[] = `listRelatives -s $insertionLocator[0]`;
+
+                //Make necessary connection to compute bulging
+                connectAttr ($originLocatorShape[0] + ".worldPosition") ($distNode + ".point1");
+                connectAttr ($insertionLocatorShape[0] + ".worldPosition") ($distNode + ".point2");
+                connectAttr ($distNode + ".distance") ($multiDivNode + ".input2X") ;
+                connectAttr ($nameOfMuscle[0] + ".bulge") ($multiDivNode + ".input1X");
+			
+                connectAttr ($multiDivNode + ".outputX") ($nameOfOnGroup + ".scaleX");
+                connectAttr ($multiDivNode + ".outputX") ($nameOfOnGroup + ".scaleY");
+                connectAttr ($multiDivNode + ".outputX") ($nameOfOnGroup + ".scaleZ");
+	
+                connectAttr ($nameOfMuscle[0] + ".volumeEnvelope") ($nameOfScaleConstraint[0] + "." + $nameOfOnGroup + "W0");
+				
+				connectAttr ($nameOfMuscle[0] + ".originOrientWeight") ($nameFromTextField + "_Bulge_orientConstraint1" + "." + $nameFromTextField + "_OriginW0");
+				connectAttr ($nameOfMuscle[0] + ".insertionOrientWeight") ($nameFromTextField + "_Bulge_orientConstraint1" + "." + $nameFromTextField + "_InsertionW1");	
+				
+				//Cleanup
+                parent $nameOfOnGroup $nameOfMuscleGroup;
+                parent $nameOfOffGroup $nameOfMuscleGroup;
+                setAttr ($nameOfOnGroup + ".visibility") 0;
+                setAttr ($nameOfOnGroup + ".visibility") 0;
+                setAttr ($bulgeLocator[0] + ".visibility") 0;
+                setAttr ($originCurve + ".visibility") 0;
+                setAttr ($middleCurve + ".visibility") 0;
+                setAttr ($insertionCurve + ".visibility") 0;
+				
+				//Set the scale value of the Volume Off group to the value of the Volume On group
+				float $volumeOnValue = `getAttr ($nameOfOnGroup + ".scaleX")`;
+				setAttr ($nameOfOffGroup + ".scaleX") $volumeOnValue;
+				setAttr ($nameOfOffGroup + ".scaleY") $volumeOnValue;
+				setAttr ($nameOfOffGroup + ".scaleZ") $volumeOnValue;
+				
+                //Auto adjust the scale on the bulge curve
+                float $currentLength = `arclen $middleCurve`;
+                float $i;
+                float $scaleFactor = 1;
+
+                if ($initialLength > $currentLength)
+                {
+                    while ($initialLength > $currentLength)
+                    {
+                        $scaleFactor += 0.01;
+
+                        setAttr ($middleCurve + ".scaleX") $scaleFactor;
+                        setAttr ($middleCurve + ".scaleY") $scaleFactor;
+                        setAttr ($middleCurve + ".scaleZ") $scaleFactor;
+
+                        $currentLength = `arclen $middleCurve`;
+                    }
+                }else
+                {
+                    while ($initialLength < $currentLength)
+                    {
+                        $scaleFactor -= 0.01;
+
+                        setAttr ($middleCurve + ".scaleX") $scaleFactor;
+                        setAttr ($middleCurve + ".scaleY") $scaleFactor;
+                        setAttr ($middleCurve + ".scaleZ") $scaleFactor;
+
+                        $currentLength = `arclen $middleCurve`;
+                    }
+                }
+				
+				//Parent each circle under it's corresponding locator
+                parent $originCurve $originLocator[0];
+                parent $middleCurve $bulgeLocator[0];
+                parent $insertionCurve $insertionLocator[0];
+				
+				//Create the Duplicate Group
+				select $nameOfMuscle[0] $nameOfMuscleGroup;
+				group -n ($nameFromTextField + "DuplicateGroup"); 
+				xform -os -piv 0 0 0;
+				
+                //Select the muscle surface for the user
+                select $nameOfMuscle[0];
+
+                print "Muscle was successfully created!\n";
+            }
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//                              cgTkCreateMuscleShader
+/////////////////////////////////////////////////////////////////////////////////////////
+global proc cgTkCreateMuscleShader()
+{
+    //Create a lambert shader
+    string $nameOfShader = `shadingNode -asShader lambert`;
+    $nameOfShader = `rename $nameOfShader ("cgTkMuscleShader")`;
+
+    //Create a ramp texture
+    string $nameOfRamp = `shadingNode -asTexture ramp`;
+    $nameOfRamp = `rename $nameOfRamp ("cgTkMuscleRamp")`;
+
+    //Change the ramp to 'V' type
+    setAttr ($nameOfRamp + ".type") 0;
+
+    //Set the ramp to 'smooth' interpolation
+    setAttr ($nameOfRamp + ".interpolation") 4;
+
+    //Set the origin, insertion and middle colors
+    setAttr ($nameOfRamp + ".colorEntryList[2].color") -type double3 1 0.99603 0.603;
+    setAttr ($nameOfRamp + ".colorEntryList[1].color") -type double3 1 0.227907 0.21 ;
+    setAttr ($nameOfRamp + ".colorEntryList[0].color") -type double3 0.993 0.955668 0.890721 ;
+
+    //Set the position of the colors
+    setAttr "cgTkMuscleRamp.colorEntryList[0].position" 0.0;
+    setAttr "cgTkMuscleRamp.colorEntryList[1].position" 0.5;
+    setAttr "cgTkMuscleRamp.colorEntryList[2].position" 1.0;
+
+    //Connect the ramp to the lambert shader's color
+    connectAttr -force ($nameOfRamp + ".outColor") ($nameOfShader + ".color");
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//                              MAIN WINDOW
+/////////////////////////////////////////////////////////////////////////////////////////
+
+global proc cgTkMakeMuscle ()
+{
+    if (`window -q -ex makeMuscleWindow`) deleteUI makeMuscleWindow;
+
+    //Main Window
+    window -title "CG Toolkit - Auto Make Muscle v1.0" -w 340 -h 105 makeMuscleWindow;
+
+        columnLayout;
+
+            //Name of muscle layout
+            rowColumnLayout -nc 2 -cw 1 130 -cw 2 200;
+                text "Name of Muscle : ";
+                textField -text "muscle" nameOfMuscleField;
+                text "Auto-assign Shader: ";
+                checkBox -value 1 -label "Yes/No" shaderCheckbox;
+            setParent..;
+
+            separator -w 340 -h 15;
+
+            //Button layout
+            rowColumnLayout -nc 2 -cw 1 240 -cw 2 90;
+                text "Shift select origin, middle and insertion curves(3) : ";
+                button -label "Make Muscle" -c "cgTkCreateMuscle";
+
+    //Source a hypershade script for shader assignment
+    if (!`exists AEfileTextureBrowser`) source "AEfileTemplate.mel";
+
+    //Show Main Window Command
+    showWindow makeMuscleWindow;
+}

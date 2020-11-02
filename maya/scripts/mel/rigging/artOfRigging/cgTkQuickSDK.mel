@@ -1,0 +1,199 @@
+//								cgTkQuickSDK.mel
+//							Copyright CGToolkit 2005
+//
+//			Purpose:
+//			This script will create a different interface for setting driven keys. The
+//			default SDK window that comes with Maya requires you to choose which attributes
+//			to load from a list. Quick SDK automatically loads whatever attribute is selected
+//			from the channel box.
+//
+//			Also, you can enter multiple keys at the same time and the script will set
+//			all the necessary attributes thus quickening the process of setting multiple
+//			driven keys with the same values, something that often arises when setting up 
+//			the SDK on fingers/toes.
+//
+//			By loading a list of driven objects, you can batch process set driven keys
+//			to create as many as you like with a single click.
+//
+//			Directions:
+//			1.) Load obj.attr into the list.
+//			2.) Type driver/driven attributes into the Key fields.
+//			3.) Hit the 'Key' Buttons to set driven keys on all objects in list.
+
+/////////////////////////////////////////////////
+// PROCEDURE TO Select Obj in List
+/////////////////////////////////////////////////	
+global proc cgTkSelectObjectInList()
+{
+	string $nameOfObjAttr[] = `textScrollList -q -selectItem targetAttrList`;
+	
+	string $objAndAttr[];
+	tokenize $nameOfObjAttr[0] "." $objAndAttr;
+	
+	if (!`objExists $objAndAttr[0]`)
+	{
+		warning "Object was not found. Please remove from the list.";
+	}else
+	{
+		select $objAndAttr[0];
+	}
+}
+/////////////////////////////////////////////////
+// PROCEDURE TO ADD OBJ TO LIST
+/////////////////////////////////////////////////
+
+global proc cgTkAddToTargetList()
+{
+	string $nameOfObjAttr = `textFieldGrp -q -text drivenInput`;
+	
+	string $objAndAttr[];
+	tokenize $nameOfObjAttr "." $objAndAttr;
+	
+	if (!`objExists $objAndAttr[0]`)
+	{
+		warning "Object was not found. Object not added to the list";
+	}else
+	{
+		if (!`attributeExists $objAndAttr[1] $objAndAttr[0]`)
+		{
+			warning "That attribute does not exist on the specified object. Please check the spelling and try again.";
+		}else
+		{  
+			textScrollList 	-e -append $nameOfObjAttr targetAttrList;
+			print ($objAndAttr[0] + "." + $objAndAttr[1] + " was added to the list!\n");
+		}
+	}
+}
+
+/////////////////////////////////////////////////
+// PROCEDURE TO REMOVE OBJ FROM LIST
+/////////////////////////////////////////////////
+
+global proc cgTkRemoveFromTargetList()
+{
+	int $currentSelectedIndex[] = `textScrollList -q -selectIndexedItem targetAttrList`;
+	
+	if ($currentSelectedIndex[0])
+	{
+		textScrollList -e -removeIndexedItem $currentSelectedIndex[0] targetAttrList;
+		textScrollList -e -showIndexedItem $currentSelectedIndex[0] targetAttrList;
+		print ("Object number " + $currentSelectedIndex[0] + " removed from the list.\n");
+	}
+}
+
+/////////////////////////////////////////////////
+// PROCEDURE TO SET A DRIVEN KEY
+/////////////////////////////////////////////////
+
+global proc cgTkSetDrivenKey (int $keyNumber)
+{
+	string $arrayOfObjects[] = `textScrollList -q -allItems targetAttrList`;
+	string $obj;
+	
+	if ($arrayOfObjects[0] != "")
+	{
+		for ($obj in $arrayOfObjects)
+		{
+			//GET KEY VALUES
+			float $firstValue = `floatFieldGrp -q -value1 ("Key"+$keyNumber)`;
+			float $secondValue = `floatFieldGrp -q -value2 ("Key"+$keyNumber)`;
+			string $driver = `textFieldGrp -q -text driverInput`;
+			string $driven = $obj;
+			float $driverValueBefore = `getAttr $driver`;
+			float $drivenValueBefore = `getAttr $driven`;
+			
+			//SET KEYS
+			setAttr $driver $firstValue;
+			setAttr $driven $secondValue;
+			setDrivenKeyframe -cd $driver $driven;
+			setAttr $driver $driverValueBefore;
+			setAttr $driven $drivenValueBefore;
+		}
+	}
+}
+
+/////////////////////////////////////////////////
+// PROCEDURE CALLED WHEN 'LOAD DRIVER/DRIVEN' BUTTON IS PRESSED.
+/////////////////////////////////////////////////
+
+global proc cgTkLoadObjAttr(string $driverOrDriven)
+{
+	string $currentSelAttr[];
+	string $currentSelObject[];
+	string $objectAndAttr = "";
+	
+	//GET SELECTED OBJECT AND ATTRIBUTE
+	$currentSelAttr = `channelBox -query -selectedMainAttributes mainChannelBox`;
+	$currentSelObject = `ls -sl -o`;
+	$objectAndAttr =  ($currentSelObject[0] + "." + $currentSelAttr[0]);
+	
+	//DETERMINE IF LOADING DRIVER OR DRIVEN
+	if ($driverOrDriven == ("driver"))
+	{
+		//LOAD DRIVER
+		textFieldGrp -e -text $objectAndAttr driverInput;
+	} else {
+		//LOAD DRIVEN
+		textFieldGrp -e -text $objectAndAttr drivenInput;
+	}
+	
+	// USER FEEDBACK
+	if ($objectAndAttr == ".")
+	{
+		warning "Nothing loaded. You must select one object and it's attribute in the channel box.\n";
+	} else {
+		print ($objectAndAttr + " has been loaded as " + $driverOrDriven + ".\n");
+	}
+}
+
+/////////////////////////////////////////////////
+//								MAIN WINDOW
+/////////////////////////////////////////////////
+global proc cgTkQuickSDK()
+{
+	
+	if (`window -q -ex cgTkQuickSetDrivenWnd`) deleteUI cgTkQuickSetDrivenWnd;
+	
+		// CREATE SET DRIVEN KEY WINDOW
+		window -t "CGToolkit's Quick Set Driven Key v1.5"
+			-iconName "Set Driven"
+			-s true cgTkQuickSetDrivenWnd;
+		
+		columnLayout  -adj true -cal "left" -cat "both" 5 -columnWidth 50 -rs 5;
+		button -label "Load Driver" -al "center" -bgc 1 .75 .75 -c "cgTkLoadObjAttr(\"driver\");" loadDriverButton;
+		textFieldGrp -cw 1 50 -label "Driver : " -text "driverObject.attribute" driverInput;
+		button -label "Load Driven" -al "center" -bgc .5 1 .5 -c "cgTkLoadObjAttr(\"driven\");" loadDrivenButton;
+		textFieldGrp -cw 1 50 -label "Driven : " -text "drivenObject.attribute" drivenInput;
+		rowColumnLayout -nc 2 -cal 2 "left" -cw 1 150 -cw 2 150;
+			button -label "Add to List"  -c cgTkAddToTargetList;
+			button -label "Remove from List" -c cgTkRemoveFromTargetList;
+		setParent..;
+		textScrollList 	-numberOfRows 8 
+						-allowMultiSelection false 
+						-showIndexedItem 4
+						-doubleClickCommand cgTkSelectObjectInList
+						targetAttrList;
+		
+		separator -height 5 -style "in";
+	
+		text "                        Enter Driver/Driven Values:";
+		rowColumnLayout -nc 2 -cal 2 "left" -cw 1 220 -cw 2 80;
+		floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #1" -value1 0.0 -value2 0.0 Key1;
+		button -label "Key" -c "cgTkSetDrivenKey(1)";
+		floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #2" -value1 0.0 -value2 0.0 Key2;
+		button -label "Key" -c "cgTkSetDrivenKey(2)";
+		floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #3" -value1 0.0 -value2 0.0 Key3;
+		button -label "Key" -c "cgTkSetDrivenKey(3)";
+		floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #4" -value1 0.0 -value2 0.0 Key4;
+		button -label "Key" -c "cgTkSetDrivenKey(4)";
+		floatFieldGrp -cw 1 50 -numberOfFields 2 -label "Key #5" -value1 0.0 -value2 0.0 Key5;
+		button -label "Key" -c "cgTkSetDrivenKey(5)";
+		setParent..;
+		
+		rowColumnLayout -nc 3;
+		button -label "Key Current" -c ("setDrivenKeyframe -cd (`textFieldGrp -q -text driverInput`) (`textFieldGrp -q -text drivenInput`);");
+		button -label "Key All" -c "cgTkSetDrivenKey(1); cgTkSetDrivenKey(2); cgTkSetDrivenKey(3); cgTkSetDrivenKey(4); cgTkSetDrivenKey(5);" ;
+		button -label "Close" -c "window -e -vis false cgTkQuickSetDrivenWnd;";
+		
+	showWindow  cgTkQuickSetDrivenWnd;
+}

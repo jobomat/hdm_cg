@@ -1,0 +1,26 @@
+//-----------------------------------------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+//	SCRIPT:	cgTkMultipleSprings.mel
+//	AUTHOR:	Oleg Alexander
+//			oleg@topsoilarts.com
+//	VERSION:	1.0
+//
+//	DESCRIPTION: This scripts let's you add an existing Spring to several Soft Bodies at a time
+//				 instead of adding it one by one.
+//
+//	HOW TO USE:	Select the Spring first and then all your Soft Bodies. Execute "cgTkMultipleSprings".
+//
+//-----------------------------------------------------------------------------------------------------//	
+//-----------------------------------------------------------------------------------------------------//
+
+global proc cgTkMultipleSprings()
+{
+string $selection[] = `ls -long -sl`;
+string $spring = $selection[0];
+
+for($x = 1; $x < size($selection); $x++)
+{
+	spring -add -noDuplicate false -wireframe true -wl 2 $selection[$x] $spring;
+}
+
+}

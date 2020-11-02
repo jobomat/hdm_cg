@@ -1,0 +1,187 @@
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//							- Custom Pickwalker -
+//			This script will allow a setup artist to specify custom
+//			pickwalk behavior for iconic representation.
+//
+//
+
+global proc cgTkCustomPickWalkLoadObj()
+{
+	string $sel[] = `ls -sl`;
+	
+	if (! ( 2 > (`size $sel`) > 0))
+	{
+		warning "Please select one and only one object to load.\n";
+	}else
+	{
+		button -edit -label ($sel[0]) currentObjButton;
+		
+		if (`attributeExists "cgTkPickWalkup" $sel[0]`)
+		{
+			button -edit -enable 1 -label (`getAttr ($sel[0] + ".cgTkPickWalkup")`) upButton;
+		}else
+			button -edit -enable 1 -label "Up" upButton;
+		
+		if (`attributeExists "cgTkPickWalkleft" $sel[0]`)
+		{
+			button -edit -enable 1 -label (`getAttr ($sel[0] + ".cgTkPickWalkleft")`) leftButton;
+		}else
+			button -edit -enable 1 -label "Left" leftButton;
+		
+		if (`attributeExists "cgTkPickWalkright" $sel[0]`)
+		{
+			button -edit -enable 1 -label (`getAttr ($sel[0] + ".cgTkPickWalkright")`) rightButton;
+		}else
+			button -edit -enable 1 -label "Right" rightButton;
+		
+		if (`attributeExists "cgTkPickWalkdown" $sel[0]`)
+		{
+			button -edit -enable 1 -label (`getAttr ($sel[0] + ".cgTkPickWalkdown")`) downButton;
+		}else
+			button -edit -enable 1 -label "Down" downButton;
+	}
+}
+
+
+global proc cgTkCustomPickWalkLoad(string $direction)
+{
+	string $sel[] = `ls -sl`;
+	string $loadedObject =  `button -query -label currentObjButton`;
+	
+	if (! ( 2 > (`size $sel`) > 0))
+	{
+		warning "Please select one and only one object to load.\n";
+	}else
+	{
+		button -edit -label ($sel[0]) ($direction + "Button");
+		
+		if (!(`attributeExists ("cgTkPickWalk" + $direction) $loadedObject`))
+			addAttr -ln ("cgTkPickWalk" + $direction) -dt "string" $loadedObject;
+		
+		setAttr -type "string" ($loadedObject + ".cgTkPickWalk" + $direction) $sel[0];
+	}			
+}
+
+global proc cgTkPickWalkUp ()
+{	
+	string $sel[] = `ls -sl`;
+	string $destinationObj;
+	
+	if (`attributeExists "cgTkPickWalkup" $sel[0]`)
+	{
+		$destinationObj = `getAttr ($sel[0] + ".cgTkPickWalkup")`;
+		select -r $destinationObj;
+	}
+}
+
+global proc cgTkPickWalkDown ()
+{	
+	string $sel[] = `ls -sl`;
+	string $destinationObj;
+	
+	if (`attributeExists "cgTkPickWalkdown" $sel[0]`)
+	{
+		$destinationObj = `getAttr ($sel[0] + ".cgTkPickWalkdown")`;
+		select -r $destinationObj;
+	}
+}
+
+global proc cgTkPickWalkLeft ()
+{	
+	string $sel[] = `ls -sl`;
+	string $destinationObj;
+	
+	if (`attributeExists "cgTkPickWalkleft" $sel[0]`)
+	{
+		$destinationObj = `getAttr ($sel[0] + ".cgTkPickWalkleft")`;
+		select -r $destinationObj;
+	}
+}
+
+global proc cgTkPickWalkRight ()
+{	
+	string $sel[] = `ls -sl`;
+	string $destinationObj;
+	
+	if (`attributeExists "cgTkPickWalkright" $sel[0]`)
+	{
+		$destinationObj = `getAttr ($sel[0] + ".cgTkPickWalkright")`;
+		select -r $destinationObj;
+	}
+}
+
+global proc cgTkSetCustomHotKeys()
+{
+	//Up
+ 	nameCommand -ann "Custom Pick Walk Up" -c "cgTkPickWalkUp" cgTkPickWalkUpNameCommand;
+ 	hotkey -keyShortcut "Up" -ctl -name "cgTkPickWalkUpNameCommand";
+	
+	//Down
+	nameCommand -ann "Custom Pick Walk Down" -c "cgTkPickWalkDown" cgTkPickWalkDownNameCommand;
+ 	hotkey -keyShortcut "Down" -ctl -name "cgTkPickWalkDownNameCommand";
+	
+	//Left
+	nameCommand -ann "Custom Pick Walk Left" -c "cgTkPickWalkLeft" cgTkPickWalkLeftNameCommand;
+ 	hotkey -keyShortcut "Left" -ctl -name "cgTkPickWalkLeftNameCommand";
+	
+	//Right
+	nameCommand -ann "Custom Pick Walk Right" -c "cgTkPickWalkRight" cgTkPickWalkRightNameCommand;
+ 	hotkey -keyShortcut "Right" -ctl -name "cgTkPickWalkRightNameCommand";
+	
+	print "Your hotkeys have been setup. You can now use the custom pick walking. (CTRL + DIRECTION)";
+	
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//								MAIN WINDOW
+/////////////////////////////////////////////////////////////////////////////////////////
+
+global proc cgTkPickWalker ()
+{
+	if (`window -q -ex pickWalkerWindow`) deleteUI pickWalkerWindow;
+	
+	//Main Window
+	window -title "CG Toolkit - Custom Pick Walker v1.0" -w 610 -h 150 pickWalkerWindow;
+	
+		//Menu Layout
+		menuBarLayout;
+			menu -label "Edit"; 
+				menuItem -label "Auto Setup Hotkeys" -c "cgTkSetCustomHotKeys";
+				setParent..;
+			
+		//Main Column Layout
+		columnLayout;
+		
+			frameLayout -label "Instructions:" -labelAlign "center" -collapsable 1 -collapse 1 -borderStyle etchedIn;
+				columnLayout;
+			
+				text "1.) Select an object and load it into the middle. Then load an object for each direction.";
+				text "2.) To use the hotkeys, you must setup your Maya preferences. Edit > Auto Setup Hotkeys.";
+				text "3.) Press CTRL + Direction to pickwalk.";
+				
+			setParent..;
+		setParent..;
+			
+		separator -w 600 -h 15;
+				
+		//Button layout
+		rowColumnLayout -nc 3 -cw 1 200 -cw 2 200 -cw 3 200 ;
+			text " ";
+			button -enable 0 -label "Up" -c ("cgTkCustomPickWalkLoad up") upButton;
+			text " ";
+			button -enable 0 -label "Left" -c ("cgTkCustomPickWalkLoad left") leftButton;
+			button -label "Load a Object" -c "cgTkCustomPickWalkLoadObj" currentObjButton;
+			button -enable 0 -label "Right" -c ("cgTkCustomPickWalkLoad right") rightButton;
+			text " ";
+			button -enable 0 -label "Down" -c ("cgTkCustomPickWalkLoad down") downButton;
+		setParent..;
+				
+		separator -w 600 -h 15;
+				
+
+	//Show Main Window Command
+	showWindow pickWalkerWindow;
+}

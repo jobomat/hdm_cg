@@ -1,0 +1,15 @@
+------------------------------------------
+v01.02 - 101105
+
+ Backwards-compatibility measures
+
+ * Replaced compiled Python .pyc files with source .py versions
+ * shelf_SS3.mel
+   * Took out some newer maya version shelf flags; tested back as far as 2009x64
+ * ss3StickyLips.py
+   * Simplified some button calls slightly
+
+------------------------------------------
+v01.01 - 100728
+
+ Initial post

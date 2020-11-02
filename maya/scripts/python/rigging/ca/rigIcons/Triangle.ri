@@ -1,0 +1,4 @@
+Triangle
+Triangle
+[{"childs": [{"childs": [], "pivot": null, "cmd": "maya.cmds.curve( d=1, p=[(0.496957985766,0.0,0.300444566302),(-0.501184008579,0.0,0.301022692876),(-0.00107191299124,0.0,-0.568331955112),(0.501184008579,0.0,0.296685447025)], k=[0.0,1.0,2.0,3.0] )", "type": "nurbsCurve", "name": "TriangleShape"}], "pivot": [0.0, 0.0, 0.0], "cmd": "", "type": "transform", "name": "Triangle"}]
+17

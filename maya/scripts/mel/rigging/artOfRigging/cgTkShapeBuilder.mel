@@ -1,0 +1,695 @@
+//								CGToolkit Shaper Builder
+//									cgTkShapeBuilder.mel
+//
+//				Copyright © 2004 CGTOOLKIT. All rights reserved.
+//								www.cgtoolkit.com
+//		
+//				Description:
+//
+//				This script was designed to facilitate the commonly
+//				used commands for designing pose-based deformations.
+//
+//				The 'Create Shapes' tab can be used to generate a
+//				'corrective' blendshape. This allows the setup artist
+//				to sculpt the shape in pose space.
+//				The 'Setup Shapes' tab can be used to connect these
+//				corrective shapes to the rotation of Maya joints.
+//				
+//				The BSpiritCorrectiveShape proc is used with permission
+//				from Christian Breitling :
+//						christian.breitling@gmx.de
+//				This procedure uses a matrix equation to calculate the
+//				proper motion vector for a corrective shape.
+//
+//				Directions:
+//
+//				Type 'cgTkShapeBuilder;' into the command line.
+//
+//////////////////////////////////////////////////////////////////////////
+//					BSpiritCorrectiveShape Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc string BSpiritCorrectiveShape() {
+
+  // Select the blend shape and then the skinned mesh 
+
+  string $Temp[] = `ls -sl`;
+  global string $BlendDuplicate[];
+
+  if (`size $Temp` == 2) {
+
+    string $BaseModel = $Temp[1];
+    string $BlendShape = $Temp[0];
+    string $Skin = `findRelatedSkinCluster $BaseModel`;
+    string $SkinResult;
+
+    if ($Skin == "") {
+
+      do {
+
+        string $promptDialogResult = `promptDialog 
+  
+          -title "Missing SkinCluster"
+          -message "Enter a valid skinCluster for the selected baseMesh"
+          -button "Proceed" -button "Abort"
+          -defaultButton "Proceed" -cancelButton "Abort"
+          -dismissString "Abort"`;
+
+        if ($promptDialogResult == "Proceed") {
+
+          string $NewSkinCluster = `promptDialog -query -text`;
+          
+          if (`objExists $NewSkinCluster`) {
+
+            string $SkinClusterSet = `listConnections -destination true ($NewSkinCluster + ".usedBy[0]")`;
+            string $QueryBaseModel = `listConnections -source true ($SkinClusterSet + ".instObjGroups[0].objectGroups[0]")`;
+
+            if ($QueryBaseModel == $BaseModel)
+              $SkinResult = "Proceed";      
+          }
+        }
+
+        else 
+          $SkinResult = "Abort";  
+
+      } while (($SkinResult != "Abort") && ($SkinResult != "Proceed"));
+    }
+    else $SkinResult = "Proceed";
+
+    if ($SkinResult == "Proceed") {
+
+      float $Progress = 0.0; 
+      float $BaseTempOffset[] = `getAttr ($BaseModel+".translate")`;
+      float $BlendTempOffset[] = `getAttr ($BlendShape+".translate")`;
+      float $Offset[3];
+      float $targetPosArray[];
+      float $absPosArray[];
+      float $relPosArray[];
+
+      $Offset[0] = $BlendTempOffset[0] - $BaseTempOffset[0];
+      $Offset[1] = $BlendTempOffset[1] - $BaseTempOffset[1];
+      $Offset[2] = $BlendTempOffset[2] - $BaseTempOffset[2];
+
+      int $vertexNameArray[];
+      int $VertexCount[] = `polyEvaluate -v $BaseModel`;
+      int $BlendVertexCount[] = `polyEvaluate -v $BlendShape`;
+
+      string $ShapeNode[] = `pickWalk -d down $BaseModel`;
+
+      if (! `connectionInfo -isDestination ($ShapeNode[0] + ".tweakLocation")`) {
+        print $ShapeNode[0];
+        string $TweakSet[] = `listConnections -destination true ($ShapeNode[0] + ".instObjGroups[0].objectGroups[1]")`;
+        string $Tweaknode[] = `listConnections -source true ($TweakSet[0] + ".usedBy[0]")`;
+        connectAttr ($Tweaknode[0] + ".vlist[0].vertex[0]") ($ShapeNode[0] + ".tweakLocation");
+
+      }
+
+      progressWindow
+
+        -title "BSpirit Corrective Shape"
+        -progress $Progress
+        -status "Calculating VertexMovements"
+        -isInterruptable true
+        -min 0
+        -max 100;
+
+      if ($VertexCount[0] == $BlendVertexCount[0]) {  
+
+        for ($i = 0; $i < $VertexCount[0]; $i++) {
+
+          if ( `progressWindow -query -isCancelled` ) break;
+
+          $Progress = `trunc (20.0 * $i / $VertexCount[0] + 0.5)`;
+          progressWindow -e -progress $Progress;
+
+          string $vertexName = $BlendShape + ".vtx[" + $i + "]";
+          float $targetPos[] = `pointPosition -w $vertexName`;
+
+          $vertexName = $BaseModel + ".vtx[" + $i + "]"; 
+          float $Pos[] = `pointPosition -w $vertexName`;
+          float $relVertexPos[] = `getAttr $vertexName`;
+
+          $targetPos[0] -= ($Pos[0]+$Offset[0]);
+          $targetPos[1] -= ($Pos[1]+$Offset[1]);
+          $targetPos[2] -= ($Pos[2]+$Offset[2]); 
+
+          if (($targetPos[0]>0.001) || ($targetPos[0]<-0.001) || ($targetPos[1]>0.001) || ($targetPos[1]<-0.001) || ($targetPos[2]>0.001) || ($targetPos[2]<-0.001)) {
+
+            int $vertexArraySize = `size $vertexNameArray`;
+
+            $vertexNameArray[$vertexArraySize] = $i;
+
+            $targetPosArray[($vertexArraySize * 3)] = $targetPos[0];
+            $targetPosArray[($vertexArraySize * 3 + 1)] = $targetPos[1];
+            $targetPosArray[($vertexArraySize * 3 + 2)] = $targetPos[2];
+  
+            $absPosArray[($vertexArraySize * 3)] = $Pos[0];
+            $absPosArray[($vertexArraySize * 3 + 1)] = $Pos[1];
+            $absPosArray[($vertexArraySize * 3 + 2)] = $Pos[2];
+
+            $relPosArray[($vertexArraySize * 3)] = $relVertexPos[0];
+            $relPosArray[($vertexArraySize * 3 + 1)] = $relVertexPos[1];
+            $relPosArray[($vertexArraySize * 3 + 2)] = $relVertexPos[2];
+
+          }
+        }
+
+        int $vertexNameArraySize = `size $vertexNameArray`;
+
+        progressWindow -e -status "Calculating VertexMatrix";
+
+
+        for ($i = 0; $i < $vertexNameArraySize; $i++) {
+
+          if ( `progressWindow -query -isCancelled` ) break;
+
+          $Progress = `trunc (20.0 + 60.0 * $i / $vertexNameArraySize + 0.5)`;
+          progressWindow -e -progress $Progress;
+
+          $Pos[0] = $absPosArray[($i * 3)];
+          $Pos[1] = $absPosArray[($i * 3 + 1)];
+          $Pos[2] = $absPosArray[($i * 3 + 2)];
+
+          $targetPos[0] = $targetPosArray[($i * 3)];
+          $targetPos[1] = $targetPosArray[($i * 3 + 1)];
+          $targetPos[2] = $targetPosArray[($i * 3 + 2)];
+
+          $vertexName = $BaseModel + ".vtx[" + $vertexNameArray[$i] + "]";
+
+          float $return[];
+          float $denominator;
+          float $tempPos[];
+          float $matrixEq[];
+
+          move -r 1 0 0 $vertexName;
+          $tempPos = `pointPosition -w $vertexName`;
+          $matrixEq[0]  = $tempPos[0]-$Pos[0];
+          $matrixEq[4]  = $tempPos[1]-$Pos[1];
+          $matrixEq[8]  = $tempPos[2]-$Pos[2];
+          $matrixEq[3]  = $targetPos[0];
+
+          move -r -1 1 0 $vertexName;
+          $tempPos = `pointPosition -w $vertexName`;
+          $matrixEq[1]  = $tempPos[0]-$Pos[0];
+          $matrixEq[5]  = $tempPos[1]-$Pos[1];
+          $matrixEq[9]  = $tempPos[2]-$Pos[2];
+          $matrixEq[7]  = $targetPos[1];
+
+          move -r 0 -1 1 $vertexName;
+          $tempPos = `pointPosition -w $vertexName`;
+          $matrixEq[2]  = $tempPos[0]-$Pos[0];
+          $matrixEq[6]  = $tempPos[1]-$Pos[1];
+          $matrixEq[10] = $tempPos[2]-$Pos[2];
+          $matrixEq[11] = $targetPos[2];
+
+          $denominator = 
+
+          ($matrixEq[0] * (($matrixEq[5]*$matrixEq[10]) - ($matrixEq[6]*$matrixEq[9]))) - 
+          ($matrixEq[1] * (($matrixEq[4]*$matrixEq[10]) - ($matrixEq[6]*$matrixEq[8]))) + 
+          ($matrixEq[2] * (($matrixEq[4]*$matrixEq[9] ) - ($matrixEq[5]*$matrixEq[8])));
+
+          if ($denominator != 0) { 
+
+            $return[0] = 
+ 
+            (
+            ($matrixEq[3] * (($matrixEq[5]*$matrixEq[10]) - ($matrixEq[6]*$matrixEq[9]  ))) - 
+            ($matrixEq[1] * (($matrixEq[7]*$matrixEq[10]) - ($matrixEq[6]*$matrixEq[11] ))) + 
+            ($matrixEq[2] * (($matrixEq[7]*$matrixEq[9] ) - ($matrixEq[5]*$matrixEq[11] )))
+            ) / $denominator;
+
+            $return[1] = 
+ 
+            (
+            ($matrixEq[0] * (($matrixEq[7]*$matrixEq[10]) - ($matrixEq[6]*$matrixEq[11] ))) -
+            ($matrixEq[3] * (($matrixEq[4]*$matrixEq[10]) - ($matrixEq[6]*$matrixEq[8]  ))) + 
+            ($matrixEq[2] * (($matrixEq[4]*$matrixEq[11]) - ($matrixEq[7]*$matrixEq[8]  )))
+            ) / $denominator;
+
+            $return[2] =
+
+            (
+            ($matrixEq[0] * (($matrixEq[5]*$matrixEq[11]) - ($matrixEq[7]*$matrixEq[9]  ))) - 
+            ($matrixEq[1] * (($matrixEq[4]*$matrixEq[11]) - ($matrixEq[7]*$matrixEq[8]  ))) + 
+            ($matrixEq[3] * (($matrixEq[4]*$matrixEq[9] ) - ($matrixEq[5]*$matrixEq[8]  )))
+            ) / $denominator;
+
+            move -r $return[0] $return[1] ($return[2]-1) $vertexName;
+
+          }
+        }
+  
+      if (! `progressWindow -query -isCancelled` ) {
+     
+          global string $BlendDuplicate[];
+		  setAttr ($Skin + ".envelope" ) 0;
+          string $BlendDuplicated[] = `duplicate -rc -rr $BaseModel`;
+		  $BlendDuplicate[0] = $BlendDuplicated[0];
+          string $UnlockAttributes[] = {".tx",".ty",".tz",".rx",".ry",".rz",".sx",".sy",".sz"};
+          for ($i = 0; $i < 9; $i++) {
+
+            setAttr -lock 0 ($BlendDuplicate[0] + $UnlockAttributes[$i]);
+
+          }
+        }
+  
+        progressWindow -e -st "Reseting BaseMesh";
+
+        for ($i = 0; $i < $vertexNameArraySize; $i++) {
+
+          $Progress = `trunc (80.0 + 20.0 * $i / $vertexNameArraySize + 0.5)`;
+          progressWindow -e -progress $Progress;
+
+          setAttr ($BaseModel+".vtx["+ $vertexNameArray[$i] +"]") $relPosArray[($i*3)] $relPosArray[($i*3+1)] $relPosArray[($i*3+2)];
+
+        }
+
+        setAttr ($Skin + ".envelope") 1;
+
+      }
+  
+      else print "BaseMesh and BlendShape should contain the same number of vertices.\n";
+      progressWindow -endProgress;
+    }
+  }
+  else 
+    print "Select the blend shape and then the skinned mesh - try again. \n";
+  
+  return $BlendDuplicate[0];
+}
+//////////////////////////////////////////////////////////////////////////
+//					generateBlendshape Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc generateBlendshape()
+{
+	string $currentBlendshapeNode = `textField -q -text currentBlendshapeNodeTextField`;
+	string $currentBaseMesh = `textField -q -text currentBaseMeshTextField`;
+	string $currentSel[] = `ls -sl`;
+	string $currentJoint = (`getAttr ($currentSel[0] + ".nameOfJoint")`);
+	
+	if (($currentBaseMesh == "") || ($currentBlendshapeNode == ""))
+	{
+		warning "Please load a base mesh and a blendshape node before generating a blendshape.\n";
+	}else
+	{
+		//Prepare to call the corrective shape procedure.
+		//Rotate the driver joint into the shape's pose.
+		setAttr ($currentJoint + ".rx") (`getAttr ($currentSel[0] + ".xRotation")`);
+		setAttr ($currentJoint + ".ry") (`getAttr ($currentSel[0] + ".yRotation")`);
+		setAttr ($currentJoint + ".rz") (`getAttr ($currentSel[0] + ".zRotation")`);
+		
+		//Add the base mesh to the current selection.
+		select -tgl $currentBaseMesh;
+		//Call the procedure. Store name of new shape into string.
+		string $newShape = `BSpiritCorrectiveShape`;
+		$newShape = `rename $newShape ($currentSel[0] + "1")`;
+		
+		//Add the new shape to the blendshape node.
+		//Using the listAttr command, we can get a list of all the shapes in the node.
+		string $listOfShapesInNode[] = `listAttr -k -m $currentBlendshapeNode`;
+		int $targetIndex = 0;
+		//Iterate through the list of blendshapes.
+		while (!($listOfShapesInNode[$targetIndex] == ""))
+			$targetIndex ++;
+		//$targetIndex is now equal to the number of blendshapes.
+		$targetIndex--;
+		blendShape -edit -target $currentBaseMesh $targetIndex $newShape 1 $currentBlendshapeNode;
+		print ($newShape + " was added to the " + $currentBlendshapeNode + " blendshape node.");
+		
+		if (`checkBox -q -v deleteShapeCheckBox`)
+		{
+			delete $newShape;
+		}
+		
+	}
+}
+//////////////////////////////////////////////////////////////////////////
+//					setShapeKey Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc editCurve()
+{
+	select -r `textField -q -text currentBaseMeshTextField`;
+	select -addFirst `textField -q -text currentBlendshapeNodeTextField`;
+	GraphEditor;
+	FrameSelected;
+	print "Graph Editor Loaded.";
+}
+//////////////////////////////////////////////////////////////////////////
+//					setShapeKey Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc setShapeKey()
+{
+	if ((`textField -q -text drivenShapeTextField` == "") || (`textField -q -text driverJointTextField` == ""))
+	{
+		warning "No key was set. Please load a driver joint and a driven shape before setting a key.";
+	}else
+	{
+		//Query the current value of the joint axis radio buttons.
+		int $currentSelRadioButton = `radioButtonGrp -q -select jointAxisRadioButtons`;
+		//Initialize the $jointAxis string to ".r"
+		string $jointAxis = ".r";
+		
+		//Add the proper axis name to the $jointAxis string (.rx, .ry, .rz)
+		if ($currentSelRadioButton == 1)
+			$jointAxis += "x";
+		if ($currentSelRadioButton == 2)
+			$jointAxis += "y";
+		if ($currentSelRadioButton == 3)
+			$jointAxis += "z";
+		
+		//Build driver name string.
+		string $driver = `textField -q -text driverJointTextField`;
+		$driver += $jointAxis;
+		
+		//Build the driven name string.
+		string $driven = `textField -q -text currentBlendshapeNodeTextField`;
+		$driven = ($driven + "." + `textField -q -text drivenShapeTextField`);
+		
+		//Find the value of the driver.
+		float $driverValue = `floatSliderGrp -q -value jointSlider`;
+		
+		//Find the value of the driven.
+		float $drivenValue = `floatSliderGrp -q -value shapePercentageSlider`;
+		$drivenValue = ($drivenValue / 100);
+			
+		//Set driver value.	
+		setAttr $driver $driverValue;
+		setAttr $driven $drivenValue;
+		setDrivenKeyframe -cd $driver $driven;
+		
+		print ("Key Set: (" + $driver + ", " + $driverValue + ") and (" + $driven + ", " + $drivenValue + ") .");
+	}
+}
+//////////////////////////////////////////////////////////////////////////
+//					shapeSliderCommand Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc shapeSliderCommand()
+{
+	//Query the currently loaded shape.
+	string $currentLoadedShape = `textField -q -text drivenShapeTextField`;
+	//Query the current value of the shape percentage slider.
+	float $currentSliderValue = `floatSliderGrp -q -value shapePercentageSlider`;
+	//Query the currently loaded blendshape node.
+	string $currentBlendshapeNode = `textField -q -text currentBlendshapeNodeTextField`;
+	
+	//Check to ensure that a shape is indeed loaded.
+	if ($currentLoadedShape == "")
+	{
+		warning "Click on a blendshape from the list to affect it.\n";
+	} else
+		{
+			//Set the weight of the blendshape to the value of the slider.
+			setAttr ($currentBlendshapeNode + "." + $currentLoadedShape) ($currentSliderValue / 100) ;
+		}	
+}
+
+//////////////////////////////////////////////////////////////////////////
+//					jointSliderCommand Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc jointSliderCommand()
+{
+	//Query the currently loaded joint.
+	string $currentLoadedJoint = `textField -q -text driverJointTextField`;
+	//Query the current value of the joint slider.
+	float $currentSliderValue = `floatSliderGrp -q -value jointSlider`;
+	//Query the current value of the joint axis radio buttons.
+	int $currentSelRadioButton = `radioButtonGrp -q -select jointAxisRadioButtons`;
+	//Initialize the $jointAxis string to ".r"
+	string $jointAxis = ".r";
+	
+	//Add the proper axis name to the $jointAxis string (.rx, .ry, .rz)
+	if ($currentSelRadioButton == 1)
+		$jointAxis += "x";
+	if ($currentSelRadioButton == 2)
+		$jointAxis += "y";
+	if ($currentSelRadioButton == 3)
+		$jointAxis += "z";
+	
+	//Check to ensure that a joint is indeed loaded.
+	if ($currentLoadedJoint == "")
+	{
+		warning "You must load a joint for the slider to affect.\n";
+	} else
+		{
+			//Set the value of the joint's rotation to the value of the slider.
+			setAttr ($currentLoadedJoint + $jointAxis) $currentSliderValue ;
+		}	
+}
+//////////////////////////////////////////////////////////////////////////
+//					loadDriverJoint Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc loadDriverJoint()
+{
+	//Get the current selection.
+	string $currentSelXform[] = `ls -sl`;
+	
+	//Check to ensure that the user selected a joint.
+	if (`objectType $currentSelXform[0]` != "joint")
+	{
+		warning "You must load a joint as a driver. Please select a joint and try again.\n";
+	} else
+		{
+			//Edit the text field to house the name of the driver joint.
+			textField -edit -text $currentSelXform[0] driverJointTextField;
+			//Provide some feedback for the user.
+			print ($currentSelXform[0] + " was loaded as the driver joint. \n");
+		}
+}
+//////////////////////////////////////////////////////////////////////////
+//					refreshBlendshapeList Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc refreshBlendshapeList ()
+{
+	if (`textField -q -tx currentBlendshapeNodeTextField` == "")
+	{
+		warning "Blendshape list was not updated. Please load a blendshape node first. Edit>Load Active Blendshape Node. \n";
+	} else
+		{
+			//First we must remove all of the items in the list.
+			textScrollList -edit -removeAll blendShapeTextScrollList;
+			//Now we find the name of the currently loaded blendshape node.
+			string $currentBlendshapeNode = `textField -q -tx currentBlendshapeNodeTextField`;
+			//Using the listAttr command, we can get a list of all the shapes in the node.
+			string $listOfShapesInNode[] = `listAttr -k -m $currentBlendshapeNode`;
+			//We intialize this string before adding to it in the loop.
+			string $addShapesCommand = "textScrollList -edit "; //-append "one"
+			
+			//This loop adds '-append "shapeName"' for each shape in the node.
+			int $i = 1;
+			while ($listOfShapesInNode[$i] != "")
+			{
+				$addShapesCommand = ($addShapesCommand + "-append \"" + $listOfShapesInNode[$i] + "\" ");
+				$i++;
+			}
+			
+			//Add the name of the text scroll layout.
+			$addShapesCommand = $addShapesCommand + "blendShapeTextScrollList;";
+			//Evaluate the entire command to add names to the list.
+			eval $addShapesCommand;
+			//Show the 9th item to force the UI to bring up a scroll bar.
+			textScrollList -edit -showIndexedItem 9 blendShapeTextScrollList;
+		}
+}
+//////////////////////////////////////////////////////////////////////////
+//					createSculptDuplicate Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc createSculptDuplicate()
+{
+	string $currentSelXform[] = `ls -sl`;
+	
+	if (`textField -q -tx currentBaseMeshTextField` == "")
+	{
+		warning "Duplicate not created. Please load a base mesh before creating a duplicate. Edit>Load Base Mesh.\n";
+	} else
+			if ($currentSelXform[0] != `textField -q -tx currentBaseMeshTextField`)
+			{
+				warning "Duplicate not created. Please select the currently loaded base mesh before trying to create a sculpt duplicate.\n";
+			} else
+				if ( ($currentSelXform[1] == "") || (`objectType $currentSelXform[1]` != "joint") )
+				{
+					warning "Duplicate not created. Please select the base mesh, then shift select the posed joint.\n";
+				} else
+					{
+						//Duplicate the mesh.
+						string $nameOfDuplicate[] = `duplicate -rr $currentSelXform[0]`;
+						
+						//Create a list of locked attributes.
+						string $UnlockAttributes[] = {".tx",".ty",".tz",".rx",".ry",".rz",".sx",".sy",".sz"};
+	          			//Unlock the transform attributes.
+						for ($i = 0; $i < 9; $i++)
+						{
+	            			setAttr -lock 0 ($nameOfDuplicate[0] + $UnlockAttributes[$i]);
+	          			}
+						
+						//Find the bounding box coordinates.
+						float $boundingBoxInfo[] = `polyEvaluate -boundingBox $currentSelXform[0]`;
+						//Subtract the Xmax from Xmin.
+						float $xtranslate = ($boundingBoxInfo[1] - $boundingBoxInfo[0]);
+						//Move the duplicate mesh the distance of the bounding box.
+						move -r $xtranslate 0 0 $nameOfDuplicate[0];
+						//Rename the new mesh.
+						string $newName = `rename $nameOfDuplicate[0] ($nameOfDuplicate[0] + "blendShape1")`;
+						
+						//Add custom attribute with joint rotation angles.
+						addAttr -ln xRotation -at double $newName;
+						addAttr -ln yRotation -at double $newName;
+						addAttr -ln zRotation -at double $newName;
+						addAttr -ln nameOfJoint -dt "string" $newName;
+						
+						//Set custom attributes to house joint information.
+						setAttr ($newName + ".xRotation") `getAttr ($currentSelXform[1] + ".rx")`;
+						setAttr ($newName + ".yRotation") `getAttr ($currentSelXform[1] + ".ry")`;
+						setAttr ($newName + ".zRotation") `getAttr ($currentSelXform[1] + ".rz")`;
+						setAttr -type "string" ($newName + ".nameOfJoint") $currentSelXform[1];
+					}
+}
+//////////////////////////////////////////////////////////////////////////
+//					loadBaseMesh Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc loadBaseMesh()
+{
+	string $currentSelXform[] = `ls -sl`;
+	string $currentSelShape[] = `listRelatives -shapes $currentSelXform[0]`;
+	
+	if ($currentSelXform[1] != "")
+	{
+		warning "No base mesh loaded. Please select only 1 polygonal mesh to load.\n";
+	} else
+		{
+			if (`objectType $currentSelShape[0]` != "mesh")
+			{
+				warning "Base mesh must be a polygonal mesh. NURBS and SUBD surfaces are not supported.\n";
+			} else
+				{
+					textField -edit -tx $currentSelXform[0] currentBaseMeshTextField;
+					print ($currentSelXform[0] + " was loaded as the base mesh.\n");
+				}
+		}
+}
+//////////////////////////////////////////////////////////////////////////
+//					loadBlendshapeNode Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc loadBlendshapeNode()
+{
+	string $currentSelXform[] = `ls -sl`;
+	
+	if ($currentSelXform[2] != "")
+	{
+		warning "Please select only one blendshape node from the channel box.\n";
+	} else
+		{
+			if (`objectType $currentSelXform[0]` != "blendShape")
+			{
+				warning "Please select a blendShape node from the inputs of the channel box.\n";
+			} else
+				{
+					textField -edit -tx $currentSelXform[0] currentBlendshapeNodeTextField;
+					print ($currentSelXform[0] + " was loaded as the blendShape node.\n");
+					refreshBlendshapeList;
+					
+					if ($currentSelXform[1] != `textField -q -tx currentBaseMeshTextField`)
+					{
+						warning "The newly loaded blendshape node does not belong to the current base mesh. Please load the proper base mesh.\n";
+					}
+				}
+		}
+}
+//////////////////////////////////////////////////////////////////////////
+//					cgTkShapeBuilder Procedure
+//////////////////////////////////////////////////////////////////////////
+global proc cgTkShapeBuilder ()
+{
+	//Check for multiple similar windows.
+	if (`window -q -ex shapeBuilderWindow`) deleteUI shapeBuilderWindow;
+	
+	//Build window.
+	window -w 280 -h 580 -title "CGToolkit Shape Builder v1.0" shapeBuilderWindow;
+	
+	//Build 'Edit' menu.
+	string $menuBarLayout = `menuBarLayout`;
+	menu -label "Edit"; 
+ 			menuItem -label "Load Base Mesh" -command "loadBaseMesh;";
+ 			menuItem -label "Load Active Blendshape Node" -command "loadBlendshapeNode;"; 
+ 			menuItem -label "Close" -command "deleteUI shapeBuilderWindow";		
+		
+	//Create Pane Layout
+	paneLayout -configuration "horizontal2" -paneSize 1 100 83;
+	
+		//Top Pane (The Tabs)
+		tabLayout;
+			//Create Shape Tab
+			columnLayout -adjustableColumn true "Create Shapes:";
+				separator -h 10;
+				text -align "center" -label "- Create Corrected Blendshapes -";
+ 				separator -h 10;
+				text " ";
+				text -align "left" -label "Step #1 :";
+				text -align "center" -label "Pose a joint. Select base mesh, shift select the joint.";
+				button -label "Sculpt Changes on Duplicate" -command "createSculptDuplicate;";
+				separator -h 10;
+				text " ";
+				text -align "left" -label "Step #2 :";
+				text -align "center" -label "Once sculpting is finished, select duplicate.";
+				button -label "Generate Blendshape." -command "generateBlendshape;";
+				checkBox -label "Delete Corrective Shape?" deleteShapeCheckBox;
+				separator -h 10;
+		setParent..;
+			//Setup Shape Tab
+			columnLayout -adjustableColumn true "Setup Shapes:";
+				separator -h 10;
+				text -align "center" -label "- Connect Blendshapes To Joints -";
+ 				separator -h 10;
+				text " ";
+				text "Blendshape List:";
+				textScrollList  -numberOfRows 8
+								-selectCommand ("textField -edit -text (`textScrollList -q -selectItem blendShapeTextScrollList`) drivenShapeTextField")
+								"blendShapeTextScrollList";
+				button -label "Refresh Blendshape List." -command "refreshBlendshapeList;";
+				separator -h 10;
+				text -label "Driven Shape: ";
+				textField -editable false "drivenShapeTextField";
+				button -label "Load Driver Joint:" -command "loadDriverJoint";
+				textField -editable false "driverJointTextField";
+				separator -h 10;
+				radioButtonGrp 	-columnAlign 1 "left" 
+								-columnWidth4 60 60 60 60 
+								-numberOfRadioButtons 3 
+								-label "Joint Axis:" 
+								-labelArray3 "X" "Y" "Z"
+								-select 2 
+								"jointAxisRadioButtons";
+				floatSliderGrp	-columnAlign 1 "left"
+								-columnWidth3 65 40 60
+								-label "Joint Angle:" 
+								-field true
+								-minValue -180.0 
+								-maxValue 180.0
+								-value 0
+								-dragCommand "jointSliderCommand;"
+								-changeCommand "jointSliderCommand;"
+								"jointSlider";
+				floatSliderGrp	-columnAlign 1 "left"
+								-columnWidth3 65 40 60
+								-label "Shape %:" 
+								-field true
+								-minValue 0.0 
+								-maxValue 100.0
+								-value 0
+								-dragCommand "shapeSliderCommand;"
+								"shapePercentageSlider";
+				button -label "Set Key" -command "setShapeKey;";
+				button -label "Edit Curve" -command "editCurve;";
+				separator -h 10;
+		setParent..;
+	setParent..;
+	
+		//Bottom Pane (The Information)
+		columnLayout -adjustableColumn true;
+			text -align "left" -label "Currently Using Base Mesh:";
+			textField -editable false currentBaseMeshTextField;
+			text -align "left" "Currently Using Blendshape Node:";
+			textField -editable false currentBlendshapeNodeTextField;
+	setParent..;
+	
+	//Show the CGToolkit Shape Builder window.
+	showWindow shapeBuilderWindow;
+}

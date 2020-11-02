@@ -1,0 +1,85 @@
+//
+//				Copyright © 2005 CGTOOLKIT. All rights reserved
+//								www.cgtoolkit.com
+//		
+//							- Dynamic Selection Script Node -
+//			This is a script node, that when embedded in your scene file,
+//			will allow you to create controller objects that turn green
+//			when the animator selects them.
+//
+//			Directions: 
+//			- Open the Expression Editor
+//			- Choose "Select Filter > By Script Node Name"
+//			- Copy the entire contents of this script and paste it into
+//			  the expression editor.
+//			- Click "Create".
+//			- Change the "Execute On" Type to "Open/Close"
+//			- Now save your file and re-open.
+//			- Any objects that have an attr named 'dynSelector'
+//			  will turn green when selected.
+//
+
+//Create the script node
+int $selectionScriptJobA = `scriptJob -killWithScene -event "SelectionChanged" "cgTkDynamicSelectionChanged"`;
+
+//Create green shader
+if( ! `objExists dynSelectorGreen` )
+{
+	string $greenShaderName = `shadingNode -asShader lambert`;
+	$greenShaderName = `rename $greenShaderName "dynSelectorGreen"`;
+	setAttr ($greenShaderName + ".colorG") 1;
+	setAttr ($greenShaderName + ".colorB") 0;
+	setAttr ($greenShaderName + ".colorR") 0;
+}
+
+//Loop through and find all of the dynSelector objects in the scene.
+string $all[] = `listTransforms -geometry`;
+global string $allDynSelectors[];
+
+$i=0;
+for ($obj in $all)
+{
+	if (`attributeExists "dynSelector" $obj`)
+	{
+		$allDynSelectors[$i] = $obj;
+		$i++;
+	}
+}
+
+
+//Declare the procedure that is executed when the selection changes
+global proc cgTkDynamicSelectionChanged()
+{
+	//Use some string arrays to hold the selections.
+	string $sel[] = `ls -sl`;
+	string $selectedDynSelectors[];
+	global string $allDynSelectors[];
+	int $i = 0;
+	
+	//Loop through and find all of the dynSelector objects that are also selected.
+	$i=0;
+	for ($obj in $sel)
+	{
+		 if (`attributeExists "dynSelector" $obj`)
+		 {
+			 $selectedDynSelectors[$i] = $obj;
+			 $i++;
+		 }
+	}
+	
+	//Select all of the dynSelectors and apply the initialShadingGroup.
+	if (`size($allDynSelectors)`)
+	{
+		select -r $allDynSelectors;
+		hyperShade -assign "initialShadingGroup";
+	}
+	//Select all of the selected dynSelectors and apply the green shader.
+	if (`size($selectedDynSelectors)`)
+	{
+		select -r $selectedDynSelectors;
+		hyperShade -assign "dynSelectorGreen";
+	}
+	
+	//Reset the users selection.
+	select -r $sel;
+}
