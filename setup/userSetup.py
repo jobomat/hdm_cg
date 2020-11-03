@@ -26,9 +26,9 @@ try:
     sys.path.append(global_setup_path)
     pc.mel.eval(
     'putenv "GLOBAL_SETUP_PATH" "{}"'.format(
-        global_setup_path
+            global_setup_path
+        )
     )
-)
     from setup import *
 except ImportError:
     print("'GLOBAL_SETUP_PATH' is not pointing to the setup module.")
@@ -49,11 +49,11 @@ try:
         )
     )
     sys.path.append(project_setup_path)
-    from project_setup import *
+    from setup_maya import *
 except ImportError:
-        print("The project setup module was not found.")
-        print("--> 'PROJECT_SETUP_PATH': '{}'".format(project_setup_path))
-        print("--> No project setup performed.")
+    print("The project setup module was not found.")
+    print("--> 'PROJECT_SETUP_PATH': '{}'".format(project_setup_path))
+    print("--> No project setup performed.")
 except NameError:
     print("Variable 'PROJECT_SETUP_PATH' not found in 'userSetup.py'.")
     print("--> No project setup performed.")
