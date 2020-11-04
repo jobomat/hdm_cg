@@ -26,7 +26,6 @@ def abc_export(root, file, frameRanges=[{"start": 1, "end": 1}], attrs=[],
         fr_list.extend([
             " -frameRelativeSample {}".format(frs) for frs in fr.get("frameRelativeSamples", [])
         ])
-        print fr_list
         frameRange_str = "".join(fr_list)
 
     attr_str = ""
@@ -48,7 +47,7 @@ def abc_export(root, file, frameRanges=[{"start": 1, "end": 1}], attrs=[],
         " -root ", root,
         " -file ", file, "\""
     ])
-    print mel
+    print(mel)
     pc.mel.eval(mel)
 
 

@@ -44,11 +44,48 @@ In short it suggests certain INPUT and OUTPUT actions based on the *type* (char,
 
 It makes it easy to create versions, releases, references and caches. All executed actions are standard Maya actions that could also be performed the standard Maya way.
 
-Minipipe just saves you from choosing save paths and file names each time and offers streamlined tasks based on the current stage of a file.
+Minipipe just saves you from choosing save paths and file names each time and offers streamlined tasks based on the current stage of a file. It thereby suggests a certain workflow.
 
 For example
 + it offers to create relative references of availible *props* which already have a *shading release* if you are working in a file of type *set*.  
 + it offers to create relative references of availible *chars* which already have a *rig release* if you are working in a file of type *shot*.
 + it offers to export alembic-caches of all referenced *chars* if you are working in a file of type *shot* in department *animation*.
 
-More actions are added at the moment.
+## How to start?
+
+### Create new assets
+Create new assets by clicking on one of the asset types in the *"CREATE NEW"* section. The IN and OUT sections will offer different actions based on the type of the asset and the current stage / department.
+
++ **Character:** Assets that will later be rigged/animated. Typical examples are your "actors" (humans, animals, robots, drohnes...) and objects your "actors" will interact with (move).
++ **Prop:** Unanimated objects like furniture or parts of a landscape.
++ **Set:** A collection of props and some additional models for example a room or a landscape
++ **Shot:** A shot of your production containing sets, props, cameras, keyframed characters in stage *Animation* or cached characters and the shot lighting in stage *Rendering*.
++ **Extras:** Things that fit non of the above mentioned categories.
+
+When you create a new asset, a folder structure will be created in your maya projects scene directory in a subdirectory called like the *type*. (For a character named *sam* it would create a folder *sam/* in *scenes/chars/* and inside the *sam* folder there will be a *versions/mod* and *release_history/mod* folder). It also creates a starter file  by copying and renaming the *scenes/initial.ma* to the *versions/mod*. You could adjust the *initial.ma* file if for example you want all your started assets to contain a specific node.
+
+### Save
+You can use the normal Maya save function by pressing ctrl + s.
+
+### Save new version
+If you want to keep the previous saved file and save your current changes under a new name, use the *"Save New Version"* button in the OUT tab. This will copy the current version into the *versions/-department-* folder and save your current scene with a new name.
+
+### Take a screenshot for your asset
+In the OUT tab you can click on the template image (a box for props, a house for sets...) to create a new thumbnail picture for your asset. At the moment two windows will be opened - a viewport and a "Capture Control" window. Use the viewport to frame your object and use the red "Capture" button to save the viewport image. If you change the viewport mode (textured view, antialiasing...) in your normal Maya viewport, these changes will be reflected in the capture window too.
+
+## What to do when?
+### Create a modeling release
+You can do this early in the process if you need access to unfinished models for set building or shot blocking purposes. Be aware that actions like freezing transforms, changing pivot points, changes to names or hirarchies may lead to unexpected results if the asset is already in use in another scene (e.g. a prop thats placed in a set will change position in the set if its pivot changes in the released model file).
+
+If the model is released for deformation rigging the topology should not be changed anymore.
+
+### Create first Shading Version
+To create a first shading
+For **props** you create the first shading version out of the **model** department
+If it is planned to just assign a shader to the model (no per face assignments, no textures) a Shading Release can be done while the model is still worked on. However if names, hirarchies or object count changes it may be necessary to reassign the shaders manually.
+
+If you use per face assignments of shaders, changes to the topology of the model will result in loss of shader assignments in your shading file (you can always reassign your shaders manually).
+
+If you start to texture the asset be shure to also have final UVs before starting the texture process.
+
+
