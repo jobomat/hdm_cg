@@ -225,6 +225,12 @@ class Scene():
         
         res = pc.saveAs(file_path)
         if res:
+            if res.endswith(".ma"):
+                with open(res) as f:
+                    content = f.read()  
+                with open(res, "w") as f:
+                    f.write(content.replace('fileInfo "license" "student";', 'fileInfo "license" "education";'))
+
             return ("success", "Saved as version {} ({})".format(new_version, res))
         else:
             return ("error", "Error saving new version.")
@@ -258,6 +264,11 @@ class Scene():
             write_meta(metadata)
 
             res = pc.saveFile()
+            if res.endswith(".ma"):
+                with open(res) as f:
+                    content = f.read()  
+                with open(res, "w") as f:
+                    f.write(content.replace('fileInfo "license" "student";', 'fileInfo "license" "education";'))
             copyfile(res, file_path)
             return "success", "Released {} {}".format(self.name, dept)
         except:

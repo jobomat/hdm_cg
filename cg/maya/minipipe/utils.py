@@ -61,7 +61,7 @@ def set_basepath_env(base_path=None, config=None):
 def get_base_path(config=None):
     mp_basepath = pc.mel.eval('getenv "MINIPIPE_BASE_PATH"')
     if not mp_basepath:
-        mp_basepath = set_basepath_env(config=None)
+        mp_basepath = set_basepath_env(config=config)
     return mp_basepath
 
 
@@ -96,6 +96,16 @@ def change_config_file(config_file):
     )
     set_config_file_env(config_file)
     setup_maya()
+
+
+def update_actions(mp_template_dir, mp_config):
+    with open("{}/files/minipipe_config.json".format(mp_template_dir)) as f:
+        new_config = json.load(f)
+    
+    mp_config["actions"] = new_config["actions"]
+    
+    with open("{}/pipeline/minipipe/minipipe_config.json".format(get_base_path()), "w") as f:
+        json.dump(mp_config, f, indent=4)
 
 
 def set_maya_project(mp_config):

@@ -1,5 +1,8 @@
 import pymel.core as pc
 
+from cg.maya.minipipe import colors
+reload(colors)
+COLOR = colors.COLOR
 
 def load(version_menu, scene, dept, *args, **kwargs):
     scene_file = scene.versions[dept][version_menu.getSelect() - 1]["absolute_path"]
@@ -23,7 +26,6 @@ def load(version_menu, scene, dept, *args, **kwargs):
 
 
 def ui(parentColumnLayout, scene, dept, *args, **kwargs):
-    bgc = (0, 0.7, 0)
     with pc.rowLayout(p=parentColumnLayout, nc=2, adj=1):
         with pc.optionMenu(bgc=(0.33, 0.33, 0.33), h=30) as version_menu:
             for version in scene.versions[dept]:
@@ -34,5 +36,5 @@ def ui(parentColumnLayout, scene, dept, *args, **kwargs):
                 )
         pc.button(
             c=pc.Callback(load, version_menu, scene, dept, *args, **kwargs),
-            label="Open", bgc=bgc, h=30, w=50
+            label="Open", bgc=COLOR.add_green, h=30, w=50
         )

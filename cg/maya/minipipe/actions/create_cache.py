@@ -6,7 +6,9 @@ import pymel.core as pc
 
 from cg.maya.files.alembic import abc_export
 from cg.maya.minipipe.core import read_meta, write_meta
-
+from cg.maya.minipipe import colors
+reload(colors)
+COLOR = colors.COLOR
 
 def select_grp(namespace, grp):
     pc.select("{}:{}".format(namespace, grp))
@@ -64,13 +66,12 @@ def create_caches(scene, reference_list):
 
 def ui(parent_cl, scene, dept, *args, **kwargs):
     ratios = (2, 6, 3, 3, 3, 10)
-    bgc = (.3, .3, .3)
     with pc.columnLayout(adj=True, p=parent_cl):
         pc.separator(style="in")
-        with pc.horizontalLayout(bgc=bgc, h=25, ratios=(1,5)):
+        with pc.horizontalLayout(bgc=COLOR.mid_grey, h=25, ratios=(1,5)):
             pc.text(label="  Create Caches", font="boldLabelFont", align="left")
             pc.text(label="(Target Folder: {}/caches)  ".format(scene.name), align="right")
-        with pc.horizontalLayout(ratios=ratios, bgc=bgc, h=25):
+        with pc.horizontalLayout(ratios=ratios, bgc=COLOR.mid_grey, h=25):
             pc.text(label="")
             pc.text(label="Namespace", font="boldLabelFont", align="left")
             pc.text(label="Start", font="tinyBoldLabelFont", align="left")
@@ -79,7 +80,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
             # pc.text(label="Create Cache", font="boldLabelFont")
             pc.text(label="Cache Name", font="boldLabelFont", align="left")
         
-        with pc.scrollLayout(h=200, cr=True, bgc=(.2,.2,.2)):
+        with pc.scrollLayout(h=150, cr=True, bgc=COLOR.dark_grey):
             seen = {}
             reference_list = []
 
@@ -160,8 +161,11 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
                     
                     pc.separator()
 
-        with pc.horizontalLayout(bgc=bgc):
-            pc.button(label="Flip Checkboxes", c=pc.Callback(invert_checkboxes, reference_list))
+        with pc.horizontalLayout(bgc=COLOR.mid_grey):
+            pc.button(
+                label="Flip Checkboxes", bgc=COLOR.button_grey,
+                c=pc.Callback(invert_checkboxes, reference_list)
+            )
             with pc.optionMenu() as se_option:
                 pc.menuItem(label="Set All Start/End to:")
                 pc.menuItem(label="Range Slider Values")
@@ -169,7 +173,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
                 pc.menuItem(label="Individual Meta Values")
             se_option.changeCommand(pc.Callback(set_all_start_end, se_option, reference_list, shot_meta))
             pc.button(
-                label="Create Caches", bgc=(.4, .4, .4),
+                label="Create Caches", bgc=COLOR.add_green,
                 c=pc.Callback(create_caches, scene, reference_list)
             )
         pc.separator(style="in")

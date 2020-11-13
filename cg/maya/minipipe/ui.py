@@ -256,7 +256,8 @@ class MainWindow():
 
         with pc.formLayout(parent=self.content_sl) as fl:
             sep = pc.separator(h=8)
-            with pc.paneLayout(configuration='vertical2', paneSize=[1, 45, 100],
+            pane_width = 30000 / self.win.getWidth()
+            with pc.paneLayout(configuration='vertical2', paneSize=[1, pane_width, 100],
                                separatorMovedCommand=self.scale_thumb) as self.out_pl:
                 with pc.columnLayout(adj=True):
                     if scene:
@@ -407,10 +408,30 @@ class MainWindow():
                             label="Create Project",
                             c=pc.Callback(self.create_minipipe_project)
                         )
+
+            with pc.frameLayout(label="Update", **frameLayoutFlags):
+                with pc.columnLayout(adj=True, rs=5):
+                    self.mp_template_dir_update_button = file_chooser_button(
+                        label="Minipipe Template Dir", fileMode=3, okCaption="Choose Template",
+                        startingDirectory=self.minipipe_templates_dir
+                    )
+                    pc.button(
+                        label="Update IN and OUT actions.",
+                        c=pc.Callback(self.update_actions)
+                    )
+                        
         self.content_sl.attachForm(cl, "top", 0)
         self.content_sl.attachForm(cl, "left", 0)
         self.content_sl.attachForm(cl, "right", 0)
         self.content_sl.attachForm(cl, "bottom", 0)
+
+    def update_actions(self, *args):
+        mp_template_dir = self.mp_template_dir_update_button.getText()
+        if not mp_template_dir:
+            pc.warning("Please select a template to update the actions from.")
+            return
+        mp_utils.update_actions(mp_template_dir, self.config)
+        self.reload_config()
 
     def add_asset(self, scene_type):
         result = pc.promptDialog(

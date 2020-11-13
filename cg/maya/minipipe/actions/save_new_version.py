@@ -1,5 +1,9 @@
 import pymel.core as pc
 
+from cg.maya.minipipe import colors
+reload(colors)
+COLOR = colors.COLOR
+
 
 def bump_version(scene, dept, **kwargs):
     user = kwargs.get("user", "unknown")
@@ -12,8 +16,9 @@ def bump_version(scene, dept, **kwargs):
     if update_status_message:
         update_status_message(msg)
 
+
 def ui(parent_cl, scene, dept, *args, **kwargs):
     pc.button(
-        p=parent_cl, label="Save New Version",
+        p=parent_cl, label="Save New Version", bgc=COLOR.add_green,
         c=pc.Callback(bump_version, scene, dept, **kwargs)
     )
