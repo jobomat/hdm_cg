@@ -141,6 +141,7 @@ class MainWindow():
         self.clear_main_content()
         self.highlight_button(self.in_button)
 
+        mp_utils.set_maya_project_env(self.config)
         mp_utils.set_maya_project(self.config)
         # mp_core.Scene.reload_scene_types()
 
@@ -247,6 +248,7 @@ class MainWindow():
         self.clear_main_content()
         self.highlight_button(self.out_button)
 
+        mp_utils.set_maya_project_env(self.config)
         mp_utils.set_maya_project(self.config)
         mp_core.Scene.reload_scene_types()
                 
