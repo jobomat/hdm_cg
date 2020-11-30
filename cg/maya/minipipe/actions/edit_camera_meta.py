@@ -26,7 +26,7 @@ def get_highest_cam_count():
     return max([int(c.split("_")[-1]) for c in cam_attrs]) if cam_attrs else 0
 
 
-def add_selected_cams(cam_row_cl):
+def add_selected_cams(cam_row_cl, scene, dept):
     sel = pc.selected()
     if not sel:
         pc.warning("Please select one or more Cameras.")
@@ -53,7 +53,7 @@ def add_selected_cams(cam_row_cl):
             cam.addAttr("mp_end", at="float")
         cam.setAttr("mp_end", meta["end"])
 
-    create_cam_rows(cam_row_cl)
+    create_cam_rows(cam_row_cl, scene, dept)
 
 
 def create_cam_folder(scene):
@@ -122,7 +122,7 @@ def create_cam_rows(cam_row_cl, scene, dept):
             )
             start_intField.changeCommand(pc.Callback(set_cam_start_end, start_intField, shot_cam))
             end_intField.changeCommand(pc.Callback(set_cam_start_end, end_intField, shot_cam))
-            pc.button(label="Unflag", c=pc.Callback(unflag_cam, cam_row_cl, shot_cam))
+            pc.button(label="Unflag", c=pc.Callback(unflag_cam, cam_row_cl, shot_cam, scene, dept))
             pc.button(label="Export", c=pc.Callback(export_cam, shot_cam, scene, dept))
         pc.separator(p=cam_row_cl)
             
@@ -131,12 +131,12 @@ def set_cam_start_end(intField, cam):
     cam.setAttr(intField.getAnnotation(), intField.getValue())
 
 
-def unflag_cam(cam_row_cl, shot_cam):
+def unflag_cam(cam_row_cl, shot_cam, scene, dept):
     vis = shot_cam.attr("visibility")
     cam_plug = vis.listConnections(plugs=True)[0]
     vis // cam_plug
     cam_plug.delete()
-    create_cam_rows(cam_row_cl)
+    create_cam_rows(cam_row_cl, scene, dept)
 
 
 def ui(parent_cl, scene, dept, *args, **kwargs):
@@ -151,4 +151,4 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
         with pc.columnLayout(adj=True) as cam_row_cl:
             create_cam_rows(cam_row_cl, scene, dept)
 
-        add_cam_button.setCommand(pc.Callback(add_selected_cams, cam_row_cl))
+        add_cam_button.setCommand(pc.Callback(add_selected_cams, cam_row_cl, scene, dept))
