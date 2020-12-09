@@ -4,26 +4,14 @@ from time import time
 
 import pymel.core as pc
 
-from cg.maya.minipipe.core import read_meta, write_meta
+from cg.maya.minipipe.core import (
+    read_meta, write_meta,
+    get_cam_attributes, get_shotcams, get_highest_cam_count,
+    export_cam
+)
 from cg.maya.minipipe import colors
 reload(colors)
 COLOR = colors.COLOR
-
-
-def get_cam_attributes():
-    return [
-        a for a in pc.SCENE.minipipe_meta.listAttr(ud=True)
-        if a.name().startswith("minipipe_meta.shotcam_")
-    ]
-    
-    
-def get_shotcams():
-    return [c.listConnections()[0] for c in get_cam_attributes()]
-
-
-def get_highest_cam_count():
-    cam_attrs = get_cam_attributes()
-    return max([int(c.split("_")[-1]) for c in cam_attrs]) if cam_attrs else 0
 
 
 def add_selected_cams(cam_row_cl, scene, dept):
@@ -56,53 +44,6 @@ def add_selected_cams(cam_row_cl, scene, dept):
     create_cam_rows(cam_row_cl, scene, dept)
 
 
-def create_cam_folder(scene):
-    cameras_dir = "{}/cameras".format(scene.absolute_path)
-    if not os.path.isdir(cameras_dir):
-        os.mkdir(cameras_dir)
-    camera_archive_dir = "{}/archive".format(cameras_dir)
-    if not os.path.isdir(camera_archive_dir):
-        os.mkdir(camera_archive_dir)
-    return cameras_dir, camera_archive_dir
-
-
-def export_cam(cam, scene, dept):
-    cam_dir, cam_archive_dir = create_cam_folder(scene)
-
-    cam_dup = pc.duplicate(cam, rr=True, un=True)[0]
-    cam_name = cam.name()
-    cam.rename(cam_name + "_TEMP")
-    cam_dup.rename(cam_name)
-
-    pc.parent(cam_dup, w=True)
-
-    con = pc.parentConstraint(cam, cam_dup)
-    pc.bakeResults(
-        cam_dup, simulation=True, t=(0,125), sampleBy=1, oversamplingRate=1,
-        disableImplicitControl=True, preserveOutsideKeys=True, sparseAnimCurveBake=False,
-        removeBakedAttributeFromLayer=False, removeBakedAnimFromLayer=False, bakeOnOverrideLayer=False,
-        minimizeRotation=True, controlPoints=False, shape=True
-    )
-    pc.delete(con)
-    pc.select(cam_dup, r=True)
-
-    cam_export_file = "{}/{}.ma".format(cam_dir, cam_name)
-    if os.path.isfile(cam_export_file):
-        copyfile(
-            cam_export_file, 
-            "{}/{}_{}.ma".format(cam_archive_dir, cam_name, int(time()))
-        )
-        
-    pc.exportSelected(
-        cam_export_file,
-        force=True, type="mayaAscii", preserveReferences=True, expressions=True
-    )
-    pc.select(cam, r=True)
-    pc.delete(cam_dup)
-    cam.rename(cam_name)
-
-
-
 def create_cam_rows(cam_row_cl, scene, dept):
     for child in cam_row_cl.getChildren():
         pc.deleteUI(child)
@@ -123,7 +64,7 @@ def create_cam_rows(cam_row_cl, scene, dept):
             start_intField.changeCommand(pc.Callback(set_cam_start_end, start_intField, shot_cam))
             end_intField.changeCommand(pc.Callback(set_cam_start_end, end_intField, shot_cam))
             pc.button(label="Unflag", c=pc.Callback(unflag_cam, cam_row_cl, shot_cam, scene, dept))
-            pc.button(label="Export", c=pc.Callback(export_cam, shot_cam, scene, dept))
+            pc.button(label="Export", c=pc.Callback(export_cam, shot_cam, scene))
         pc.separator(p=cam_row_cl)
             
 

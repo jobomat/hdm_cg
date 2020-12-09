@@ -86,8 +86,9 @@
                     "cg.maya.minipipe.actions.create_reference"
                 ],
                 "ren": [
-                    "cg.maya.minipipe.actions.load_any_version",
-                    "cg.maya.minipipe.actions.create_reference"
+                    "cg.maya.minipipe.actions.load_ren_version",
+                    "cg.maya.minipipe.actions.create_reference",
+                    "cg.maya.minipipe.actions.replace_caches"
                 ]
             }
         },
@@ -135,10 +136,11 @@
                     "cg.maya.minipipe.actions.save_new_version",
                     "cg.maya.minipipe.actions.edit_shot_meta",
                     "cg.maya.minipipe.actions.edit_camera_meta",
-                    "cg.maya.minipipe.actions.create_cache"
+                    "cg.maya.minipipe.actions.create_cache",
+                    "cg.maya.minipipe.actions.create_ren_version"
                 ],
                 "ren": [
-                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.save_new_ren_version",
                     "cg.maya.minipipe.actions.release"
                 ]
             }
