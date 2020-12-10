@@ -137,7 +137,7 @@ class MainWindow():
             btn.setBackgroundColor([.27,.27,.27])
         button.setBackgroundColor([.5,.5,.5])
 
-    def in_layout(self, *args):
+    def in_layout(self, *args, **kwargs):
         self.clear_main_content()
         self.highlight_button(self.in_button)
 
@@ -184,9 +184,11 @@ class MainWindow():
         fl.attachControl(pl, "top", 0, tools)
 
         if self.last_selected_scene:
-            self.update_info_panel(self.last_selected_scene)
+            self.update_info_panel(self.last_selected_scene, *args, **kwargs)
 
-    def update_info_panel(self, scene):
+    def update_info_panel(self, scene, *args, **kwargs):
+        #dept_dropdown_sel = kwargs.get("dept_dropdown_sel", "")
+        current_scene, cs_dept, cs_user, cs_time, cs_version, cs_variant = mp_core.scene_from_open_file()
         for child in self.info_panel.getChildren():
             pc.deleteUI(child)
 
@@ -200,11 +202,14 @@ class MainWindow():
                 with pc.columnLayout(adj=True, rs=5):
                     with pc.optionMenu(bgc=(0.09, 0.25, 0.37), h=30,
                                        cc=pc.Callback(self.update_in, scene)) as self.dept_optionMenu:
-                        for dept in scene.get_depts():
+                        sel = 1
+                        for i, dept in enumerate(scene.get_depts()):
+                            if cs_dept == dept:
+                                sel = i + 1
                             pc.menuItem(
                                 label=mp_utils.get_nested_dict(self.config["depts"], dept, "nice_name", dept)
                             )
-
+                    self.dept_optionMenu.setSelect(sel)
                     with pc.frameLayout(label="Suggested In Actions", collapsable=True) as self.dynamic_action_fl:
                         self.update_in(scene)
 
@@ -217,7 +222,7 @@ class MainWindow():
         self.info_panel.attachForm(ml, "right", 0)
     
     def update_in(self, scene, *args):
-        current_scene, cs_dept, cs_user, cs_time, cs_version = mp_core.scene_from_open_file()
+        current_scene, cs_dept, cs_user, cs_time, cs_version, cs_variant = mp_core.scene_from_open_file()
         # if current_scene:
         #     current_scene.get_status()
         dept = scene.get_depts()[self.dept_optionMenu.getSelect() - 1]
@@ -226,7 +231,7 @@ class MainWindow():
         )
         self.update_dynamic_actions_fl(
             scene, dept, "in", *args, in_layout=self.in_layout,
-            current_scene=current_scene, current_scene_dept=cs_dept
+            current_scene=current_scene, current_scene_dept=cs_dept, variant=cs_variant
         )
 
 
@@ -252,7 +257,7 @@ class MainWindow():
         mp_utils.set_maya_project(self.config)
         mp_core.Scene.reload_scene_types()
                 
-        scene, dept, user, time, version = mp_core.scene_from_open_file()
+        scene, dept, user, time, version, variant = mp_core.scene_from_open_file()
         if scene:
             scene.get_status()
 
@@ -307,7 +312,7 @@ class MainWindow():
                             with pc.frameLayout(lv=False, collapsable=False) as self.dynamic_action_fl:
                                 self.update_dynamic_actions_fl(
                                     scene, dept, "out", 
-                                    out_layout=self.out_layout
+                                    out_layout=self.out_layout, variant=variant
                                 )
                         else:
                             pc.text(label="No Actions availible.")
@@ -371,6 +376,11 @@ class MainWindow():
                         extraLabel='fps',  cal=[1, "left"],
                         value1=self.config["framerate"]
                     )
+                    self.render_base_path_textFieldGrp = pc.textFieldGrp(
+                        label='Path at Render Location',
+                        cal=[1, "left"],
+                        text="M:/paradise/PARADISE/3d"
+                    )
                     self.env_var_info_textFieldGrp = pc.textFieldGrp(
                         label='Name of Env Var',
                         cal=[1, "left"], editable=False,
@@ -413,10 +423,11 @@ class MainWindow():
 
             with pc.frameLayout(label="Update", **frameLayoutFlags):
                 with pc.columnLayout(adj=True, rs=5):
-                    self.mp_template_dir_update_button = file_chooser_button(
-                        label="Minipipe Template Dir", fileMode=3, okCaption="Choose Template",
-                        startingDirectory=self.minipipe_templates_dir
-                    )
+                    # self.mp_template_dir_update_button = file_chooser_button(
+                    #     label="Minipipe Template Dir", fileMode=3, okCaption="Choose Template",
+                    #     startingDirectory=self.minipipe_templates_dir
+                    # )
+                    pc.text(label="This is recommended if you downloaded a new version of the Minipipe scripts.")
                     pc.button(
                         label="Update IN and OUT actions.",
                         c=pc.Callback(self.update_actions)
@@ -428,11 +439,11 @@ class MainWindow():
         self.content_sl.attachForm(cl, "bottom", 0)
 
     def update_actions(self, *args):
-        mp_template_dir = self.mp_template_dir_update_button.getText()
-        if not mp_template_dir:
-            pc.warning("Please select a template to update the actions from.")
-            return
-        mp_utils.update_actions(mp_template_dir, self.config)
+        # mp_template_dir = self.mp_template_dir_update_button.getText()
+        # if not mp_template_dir:
+        #     pc.warning("Please select a template to update the actions from.")
+        #     return
+        mp_utils.update_actions(self.config)
         self.reload_config()
 
     def add_asset(self, scene_type):
@@ -504,6 +515,7 @@ class MainWindow():
             self.resolution_intFieldGrp.getValue2()
         )
         self.config["framerate"] = self.framerate_intFieldGrp.getValue1()
+        self.config["render_base_path"] = self.render_base_path_textFieldGrp.getText()
         if mp_utils.save_config(self.config):
             self.update_status_message(("success", "Minipipe Config saved."))
 

@@ -61,7 +61,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
     current_scene_dept = kwargs.get("current_scene_dept", None)
     config = kwargs.get("config")
     
-    if current_scene and current_scene.name == scene.name:
+    if current_scene and current_scene.name == scene.name and current_scene_dept == dept:
         if current_scene.type["name"] == "sets":
             type_filters = ["props"]
             dept_filters = ["shd"]
@@ -76,7 +76,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
         pc.separator(h=10, style='in')
         pc.text(label="Create References:", align="left")
         scene_list = pc.textScrollList(
-            numberOfRows=15, allowMultiSelection=True
+            numberOfRows=5 if dept == "ren" else 10, allowMultiSelection=True
         )
 
         with pc.horizontalLayout():

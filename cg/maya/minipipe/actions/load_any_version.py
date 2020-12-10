@@ -22,7 +22,7 @@ def load(version_menu, scene, dept, *args, **kwargs):
 
     in_layout = kwargs.get("in_layout", None)
     if in_layout:
-        in_layout()
+        in_layout(dept_dropdown_sel=dept)
 
 
 def ui(parentColumnLayout, scene, dept, *args, **kwargs):

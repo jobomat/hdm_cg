@@ -7,7 +7,8 @@ COLOR = colors.COLOR
 
 def bump_version(scene, dept, **kwargs):
     user = kwargs.get("user", "unknown")
-    msg = scene.bump_version(dept, user)
+    variant = kwargs.get("variant", "")
+    msg = scene.bump_version(dept, user, variant)
     
     out_layout = kwargs.get("out_layout", None)
     update_status_message = kwargs.get("update_status_message", None)

@@ -52,100 +52,101 @@
     },
     "actions": {
         "in": {
-            "chars":{
-                "mod": [
-                    "cg.maya.minipipe.actions.load_any_version"
-                ],
+            "chars": {
                 "rig": [
                     "cg.maya.minipipe.actions.load_any_version"
-                ],
+                ], 
                 "shd": [
                     "cg.maya.minipipe.actions.load_any_version"
-                ]
-            },
-            "props":{
+                ], 
                 "mod": [
                     "cg.maya.minipipe.actions.load_any_version"
-                ],
+                ]
+            }, 
+            "props": {
                 "shd": [
                     "cg.maya.minipipe.actions.load_any_version"
-                ]
-            },
-            "sets":{
+                ], 
                 "mod": [
-                    "cg.maya.minipipe.actions.load_any_version",
-                    "cg.maya.minipipe.actions.create_reference"
-                ],
-                "shd": [
                     "cg.maya.minipipe.actions.load_any_version"
                 ]
-            },
-            "shots":{
-                "ani": [
-                    "cg.maya.minipipe.actions.load_any_version",
-                    "cg.maya.minipipe.actions.create_reference"
-                ],
+            }, 
+            "shots": {
                 "ren": [
-                    "cg.maya.minipipe.actions.load_ren_version",
+                    "cg.maya.minipipe.actions.load_ren_version", 
                     "cg.maya.minipipe.actions.create_reference",
-                    "cg.maya.minipipe.actions.replace_caches"
+                    "cg.maya.minipipe.actions.update_alembic",
+                    "cg.maya.minipipe.actions.reference_camera"
+                ], 
+                "ani": [
+                    "cg.maya.minipipe.actions.load_any_version", 
+                    "cg.maya.minipipe.actions.create_reference"
+                ]
+            }, 
+            "sets": {
+                "shd": [
+                    "cg.maya.minipipe.actions.load_any_version"
+                ], 
+                "mod": [
+                    "cg.maya.minipipe.actions.load_any_version", 
+                    "cg.maya.minipipe.actions.create_reference"
                 ]
             }
-        },
+        }, 
         "out": {
             "chars": {
-                "mod": [
-                    "cg.maya.minipipe.actions.save_new_version",
-                    "cg.maya.minipipe.actions.release",
-                    "cg.maya.minipipe.actions.create_rig_version"
-                ],
                 "rig": [
-                    "cg.maya.minipipe.actions.save_new_version",
-                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.save_new_version", 
+                    "cg.maya.minipipe.actions.release", 
                     "cg.maya.minipipe.actions.create_shd_version"
-                ],
+                ], 
                 "shd": [
-                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.save_new_version", 
                     "cg.maya.minipipe.actions.release"
+                ], 
+                "mod": [
+                    "cg.maya.minipipe.actions.save_new_version", 
+                    "cg.maya.minipipe.actions.release", 
+                    "cg.maya.minipipe.actions.create_rig_version"
                 ]
-            },
+            }, 
             "props": {
-                "mod": [
-                    "cg.maya.minipipe.actions.save_new_version",
-                    "cg.maya.minipipe.actions.release",
-                    "cg.maya.minipipe.actions.create_shd_version"
-                ],
                 "shd": [
-                    "cg.maya.minipipe.actions.save_new_version",
+                    "cg.maya.minipipe.actions.save_new_version", 
                     "cg.maya.minipipe.actions.release"
-                ]
-            },
-            "sets": {
+                ], 
                 "mod": [
-                    "cg.maya.minipipe.actions.save_new_version",
-                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.save_new_version", 
+                    "cg.maya.minipipe.actions.release", 
                     "cg.maya.minipipe.actions.create_shd_version"
-                ],
-                "shd": [
-                    "cg.maya.minipipe.actions.save_new_version",
-                    "cg.maya.minipipe.actions.release"
                 ]
-            },
+            }, 
             "shots": {
-                "ani": [
-                    "cg.maya.minipipe.actions.save_new_version",
-                    "cg.maya.minipipe.actions.edit_shot_meta",
-                    "cg.maya.minipipe.actions.edit_camera_meta",
-                    "cg.maya.minipipe.actions.create_cache",
-                    "cg.maya.minipipe.actions.create_ren_version"
-                ],
                 "ren": [
-                    "cg.maya.minipipe.actions.save_new_ren_version",
+                    "cg.maya.minipipe.actions.save_new_version", 
                     "cg.maya.minipipe.actions.release"
+                ], 
+                "ani": [
+                    "cg.maya.minipipe.actions.save_new_version", 
+                    "cg.maya.minipipe.actions.edit_shot_meta", 
+                    "cg.maya.minipipe.actions.edit_camera_meta", 
+                    "cg.maya.minipipe.actions.create_cache", 
+                    "cg.maya.minipipe.actions.create_ren_version"
+                ]
+            }, 
+            "sets": {
+                "shd": [
+                    "cg.maya.minipipe.actions.save_new_version", 
+                    "cg.maya.minipipe.actions.release"
+                ], 
+                "mod": [
+                    "cg.maya.minipipe.actions.save_new_version", 
+                    "cg.maya.minipipe.actions.release", 
+                    "cg.maya.minipipe.actions.create_shd_version"
                 ]
             }
         }
-    },
+    }, 
     "env_var_name": "",
     "image_resolution": [1920, 1080],
     "framerate": 25,

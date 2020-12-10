@@ -34,17 +34,16 @@ class CreateRenderVersion():
 
         with pc.window(self.window_name, title="Create Render Versions") as self.win:
             with pc.columnLayout(adj=True, rs=3):
-                pc.text(label="To create multiple versions enter the names comma seperated:", h=30)
+                pc.text(label="To create multiple versions enter the version names comma seperated:", h=30)
                 self.names_textField = pc.textField(
                     placeholderText="Enter Render Version Names (Comma Seperated)",
-                    text = self.scene.name
                 )
                 with pc.frameLayout(label="Characters", collapsable=True):
                     with pc.columnLayout(adj=True, rs=3):
                         for i, ref in enumerate(pc.listReferences()):
                             meta = read_meta(ref.namespace)
                             if meta.get("abc_grp", False):
-                                scene, dept, user, ts, version = scene_from_file(ref.path)
+                                scene, dept, user, ts, version, variant = scene_from_file(ref.path)
                                 scene.get_status()
                                 select = 3
                                 labelArray = ['No Shading Version availible', 'Remove', 'Do Nothing']
@@ -114,18 +113,20 @@ class CreateRenderVersion():
             if choice in [1, 2]:
                 ref["reference"].remove()
 
-        self.scene.name = scene_names.pop(0)
         saved_file_name = normpath(
             pc.saveAs("/".join([
                 render_versions_folder,
-                self.scene.create_version_file_name("ren", self.user)
+                self.scene.create_version_file_name("ren", self.user, variant=scene_names.pop(0))
             ]))
         )
 
         for scene_name in scene_names:
             copyfile(
                 saved_file_name, 
-                saved_file_name.replace(self.scene.name, scene_name)
+                "/".join([
+                    render_versions_folder,
+                    self.scene.create_version_file_name("ren", self.user, variant=scene_name)
+                ])
             )
         
         if self.out_layout:

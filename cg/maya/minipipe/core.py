@@ -5,7 +5,7 @@ from datetime import datetime
 import sys
 import importlib
 import json
-# from collections import defaultdict
+import collections
 
 import pymel.core as pc
 
@@ -100,15 +100,15 @@ def export_cam(cam, scene):
 
 
 def parse_file_name(path_and_file):
-    name = dept = user = ts = version = ""
+    name = dept = user = ts = version = variant = ""
     if not path_and_file:
-        return name, dept, user, ts, version  # untitled / neue szene
+        return name, dept, user, ts, version, variant  # untitled / neue szene
 
     scene_name = path_and_file.split("/")[-1].split(".")[0]
     scene_parts = scene_name.split("_")
 
     if len(scene_parts) <= 1:
-        return name, dept, user, ts, version  # not conforming to naming convention
+        return name, dept, user, ts, version, variant  # not conforming to naming convention
 
     name = scene_parts[0]
     dept = scene_parts[1]
@@ -119,8 +119,12 @@ def parse_file_name(path_and_file):
         version = scene_parts[4]
     except:
         user = ts = version = ""
+    try:
+        variant = scene_parts[5]
+    except:
+        pass
 
-    return name, dept, user, ts, version
+    return name, dept, user, ts, version, variant
 
 
 def get_scene_types():
@@ -164,6 +168,7 @@ class Scene():
         self.icon = icon if os.path.isfile(icon) else self.type["icon"]
         self.releases = []
         self.versions = {}
+        self.variants = []
         # self.depts = []
 
     @classmethod
@@ -217,11 +222,11 @@ class Scene():
 
         return dept_v, dept_rh
 
-    def create_version_file_name(self, dept, user, version=1, ts=None):
+    def create_version_file_name(self, dept, user, version=1, ts=None, variant=""):
         if not ts:
             ts = int(time())
-        return "{}_{}_{}_{}_{}.ma".format(
-            self.name, dept, user, ts, str(version).zfill(4)
+        return "{}_{}_{}_{}_{}{}.ma".format(
+            self.name, dept, user, ts, str(version).zfill(4), "" if not variant else "_"+variant
         )
 
     def get_status(self):
@@ -243,7 +248,7 @@ class Scene():
                 ))
                 for f in reversed(files):
                     if f.endswith(".ma") or f.endswith(".mb"):
-                        name, dept, user, ts, version = parse_file_name(
+                        name, dept, user, ts, version, variant = parse_file_name(
                             os.path.join(self.absolute_path, "versions", d, f)
                         )
                         if dept not in self.versions:
@@ -273,17 +278,33 @@ class Scene():
             self.versions = {}
             self.release_history = {}
 
+    def get_variant_versions(self, dept):
+        _, dirs, files = next(os.walk(os.path.join(self.absolute_path, "versions", dept)))
+        variant_versions = collections.OrderedDict()
+        for f in files:
+            if f.endswith(".ma") or f.endswith(".mb"):
+                name, dept, user, ts, version, variant = parse_file_name(
+                    os.path.join(self.absolute_path, "versions", dept, f)
+                )
+            else:
+                continue
+            if variant not in variant_versions:
+                variant_versions[variant] = []
+            variant_versions[variant].append(f)
+        return variant_versions
+
+
     def get_nice_time(self, ts=None):
         if not ts:
             ts = int(time())
         timeformat = '%d.%m.%Y %H:%M'
         return datetime.fromtimestamp(int(ts)).strftime(timeformat)
 
-    def bump_version(self, dept, user):
+    def bump_version(self, dept, user, variant=""):
         latest = self.get_latest_version(dept)
         new_version = int(latest["version"]) + 1
         file_name = self.create_version_file_name(
-            dept, user, version=new_version
+            dept, user, version=new_version, variant=variant
         )
         file_path = normpath(os.path.join(
             self.type["path"], self.name, "versions", dept, file_name
@@ -301,9 +322,13 @@ class Scene():
         else:
             return ("error", "Error saving new version.")
         
-    def release(self, dept, user):
+    def release(self, dept, user, variant=""):
         file_path = normpath(os.path.join(
-            self.type["path"], self.name, "{}_{}.ma".format(self.name, dept)
+            self.type["path"], self.name, "{}{}_{}.ma".format(
+                self.name,
+                "" if not variant else "_{}".format(variant),
+                dept
+            )
         ))
         try:
             if os.path.isfile(file_path):
@@ -317,8 +342,11 @@ class Scene():
                 copyfile(
                     file_path, 
                     normpath(os.path.join(
-                        release_history_dir, "{}_{}_{}.ma".format(
-                            str(len(self.release_history[dept]) + 1).zfill(4), self.name, dept 
+                        release_history_dir, "{}_{}{}_{}.ma".format(
+                            str(len(self.release_history[dept]) + 1).zfill(4),
+                            self.name,
+                            "" if not variant else "_{}".format(variant),
+                            dept 
                         )
                     ))
                 )
@@ -381,7 +409,7 @@ def get_scene_list():
 
 
 def scene_from_file(file):
-    name, dept, user, ts, version = parse_file_name(file)
+    name, dept, user, ts, version, variant = parse_file_name(file)
 
     possible_paths = [
         ("{}/{}".format(scene_type["path"], name), scene_type)
@@ -393,9 +421,9 @@ def scene_from_file(file):
         if file.startswith(path):
             possible_path = path
             st = scene_type
-            return Scene(name, scene_type=st), dept, user, ts, version
+            return Scene(name, scene_type=st), dept, user, ts, version, variant
 
-    return None, None, None, None, None  # not in Minipipe path
+    return None, None, None, None, None, None  # not in Minipipe path
 
 
 def scene_from_open_file():
