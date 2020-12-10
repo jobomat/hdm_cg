@@ -50,7 +50,7 @@ def create_first_shading_version(scene, dept, *args, **kwargs):
     dept_v, dept_rh = scene.create_dept_folders("shd")
     pc.saveAs("/".join([dept_v, scene.create_version_file_name("shd", user)]))
 
-    msg = ("success", "First Shading version for {} created.".format(scene.name))
+    msg = ("success", "First Shading version for {} created. (Rig release is recommended.)".format(scene.name))
 
     if out_layout:
         out_layout()

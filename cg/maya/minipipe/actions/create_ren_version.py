@@ -77,7 +77,7 @@ class CreateRenderVersion():
 
     def create_versions(self, *args):
         scene_names = self.names_textField.getText().split(",")
-        scene_names = [s.replace(" ", "-").strip() for s in scene_names]
+        scene_names = [s.replace(" ", "-").replace("_", "-").strip() for s in scene_names]
         scene_names = [s for s in scene_names if s]
         
         if not scene_names:
