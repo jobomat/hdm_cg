@@ -11,7 +11,7 @@ reload(colors)
 COLOR = colors.COLOR
 
 def select_grp(namespace, grp):
-    pc.select("{}:{}".format(namespace, grp))
+    pc.select("{}:{}".format(namespace, grp.split(":")[-1]))
 
 
 def create_caches_menu(scene, namespace):
@@ -27,7 +27,7 @@ def merge_alembic(scene, selected_cache_optionMenu, namespace, grp):
         selected_cache_optionMenu.getValue()
     )
     select_grp(namespace, grp)
-    abc_merge("{}:{}".format(namespace, grp), abc_file)
+    abc_merge("{}:{}".format(namespace, grp.split(":")[-1]), abc_file)
   
 
 def ui(parent_cl, scene, dept, *args, **kwargs):
@@ -63,7 +63,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
                                 label="Update", bgc=COLOR.add_green,
                                 c=pc.Callback(
                                     merge_alembic, scene, selected_cache_optionMenu,
-                                    ref.fullNamespace, meta["abc_grp"]
+                                    ref.namespace, meta["abc_grp"]
                                 )
                             )
                         pc.separator()
