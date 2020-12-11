@@ -17,8 +17,11 @@ def select_grp(namespace, grp):
 def create_caches_menu(scene, namespace):
     caches_dir = "{}/caches".format(scene.absolute_path)
     _, dirs, files = next(os.walk(caches_dir))
-    for file in [f for f in files if f.endswith(".abc")]:
-        pc.menuItem(file)
+    try:
+        for file in [f for f in files if f.endswith(".abc")]:
+            pc.menuItem(file)
+    except StopIteration:
+        pass
 
 
 def merge_alembic(scene, selected_cache_optionMenu, namespace, grp):
