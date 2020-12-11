@@ -15,12 +15,12 @@ from cg.maya.minipipe.utils import load_config, get_nested_dict
 
 def get_meta_node(namespace=""):
     name = "{}:minipipe_meta".format(namespace)
+    meta = None
     try:
         meta = pc.PyNode(name)
     except pc.MayaObjectError:
         meta = pc.group(empty=True, name=name)
         meta.setAttr("hiddenInOutliner", True)
-        pc.mel.eval("AEdagNodeCommonRefreshOutliners();")
         meta.addAttr("data", type="string")
         meta.setAttr("data", "{}")
 
@@ -28,11 +28,14 @@ def get_meta_node(namespace=""):
 
 def read_meta(namespace=""):
     meta_node = get_meta_node(namespace)
-    return json.loads(meta_node.getAttr("data"))
+    if meta_node:
+        return json.loads(meta_node.getAttr("data"))
+    return None
 
 def write_meta(data, namespace=""):
     meta_node = get_meta_node(namespace)
-    meta_node.setAttr("data", json.dumps(data))
+    if meta_node:
+        meta_node.setAttr("data", json.dumps(data))
 
 
 def get_cam_attributes():

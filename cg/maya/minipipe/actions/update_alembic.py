@@ -50,7 +50,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
             
                 for ref in pc.listReferences():
                     meta = read_meta(ref.namespace)
-                    if meta.get("abc_grp", False):
+                    if meta and meta.get("abc_grp", False):
                         with pc.horizontalLayout(ratios=ratios):
                             pc.button(
                                 label=ref.namespace, 

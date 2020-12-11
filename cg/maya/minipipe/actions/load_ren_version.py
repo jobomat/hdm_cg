@@ -39,7 +39,7 @@ def create_version_menu(cl, variant_menu, variant_versions, callback):
     sm = pc.optionMenu(bgc=(0.33, 0.33, 0.33), h=30, p=cl)
     
     sm.addMenuItems(
-        variant_versions.items()[variant_menu.getSelect() - 1][1]
+        reversed(variant_versions.items()[variant_menu.getSelect() - 1][1])
     )
 
 
