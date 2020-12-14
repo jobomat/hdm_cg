@@ -9,6 +9,19 @@ def release(scene, dept, *args, **kwargs):
 
     msg = scene.release(dept, user, variant)
 
+    if dept == "ren" and msg[0] == "success":
+        searchstring = pc.mel.eval('getenv "{}"'.format(pc.mel.eval('getenv "env_var_name"')))
+        replacestring = "{}/{}".format(
+            kwargs["config"]["render_base_path"],
+            kwargs["config"]["maya_project_dir"]
+        )
+        if searchstring != replacestring:
+            with open(msg[1]) as f:
+                ma = f.read()
+            ma = ma.replace(searchstring, replacestring)
+            with open(msg[1], "w") as f:
+                f.write(ma)
+
     if out_layout:
         out_layout()
     if update_status_message:
@@ -23,7 +36,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
     elif dept == "rig":
         help_text = "New rig feature?"
     elif dept == "shd":
-        help_text = "New shader settings or maps?" 
+        help_text = "New shader settings or maps?"
     pc.text(p=parent_cl, label=help_text)
     pc.button(
         p=parent_cl, label="Release this version as '{}{}_{}'".format(

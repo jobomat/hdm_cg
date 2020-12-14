@@ -367,7 +367,7 @@ class Scene():
                 with open(res, "w") as f:
                     f.write(content.replace('fileInfo "license" "student";', 'fileInfo "license" "education";'))
             copyfile(res, file_path)
-            return "success", "Released {} {}".format(self.name, dept)
+            return "success", file_path
         except:
             return "error", "Error releasing {} {}".format(self.name, dept)
 
