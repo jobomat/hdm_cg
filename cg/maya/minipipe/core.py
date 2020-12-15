@@ -68,10 +68,18 @@ def export_cam(cam, scene):
     cam_dir, cam_archive_dir = create_cam_folder(scene)
 
     cam_dup = pc.duplicate(cam, rr=True, un=True)[0]
-    cam_name = cam.name()
-    cam.rename(cam_name + "_TEMP")
-    cam_dup.rename(cam_name)
+    cam_name = cam.nodeName().split(":")[-1]
 
+    cam_dup.rename(cam_name + "_bake")
+
+    for attr in ["tx", "ty", "tz", "rx", "ry", "rz"]:
+        cam_dup.attr(attr).unlock()
+        cam_dup.attr(attr).setKeyable(True)
+    cam_shape = cam_dup.getShape()
+    for attr in ["depthOfField", "displayCameraFrustum", "fStop", "focalLength", "focusDistance"]:
+        cam_dup.attr(attr).unlock()
+        cam_dup.attr(attr).setKeyable(True)
+    
     pc.parent(cam_dup, w=True)
 
     con = pc.parentConstraint(cam, cam_dup)
@@ -82,9 +90,10 @@ def export_cam(cam, scene):
         minimizeRotation=True, controlPoints=False, shape=True
     )
     pc.delete(con)
-    pc.select(cam_dup, r=True)
+    pc.select(cl=True)
+    pc.select(cam_dup)
 
-    cam_export_file = "{}/{}.ma".format(cam_dir, cam_name)
+    cam_export_file = "{}/{}.ma".format(cam_dir, cam_name.split(":")[-1])
     if os.path.isfile(cam_export_file):
         copyfile(
             cam_export_file, 
@@ -93,11 +102,11 @@ def export_cam(cam, scene):
         
     fn = pc.exportSelected(
         cam_export_file,
-        force=True, type="mayaAscii", preserveReferences=True, expressions=True
+        force=True, type="mayaAscii", preserveReferences=False, expressions=False
     )
-    pc.select(cam, r=True)
+    pc.select(cl=True)
+    pc.select(cam)
     pc.delete(cam_dup)
-    cam.rename(cam_name)
 
     return fn
 

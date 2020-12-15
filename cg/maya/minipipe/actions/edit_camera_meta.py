@@ -49,8 +49,8 @@ def create_cam_rows(cam_row_cl, scene, dept):
         pc.deleteUI(child)
 
     for shot_cam in get_shotcams():
-        with pc.rowLayout(nc=7, p=cam_row_cl) as row:
-            cam_name_text = pc.text(label=shot_cam.name(), align="left", w=95)
+        with pc.rowLayout(nc=7, p=cam_row_cl):
+            cam_name_text = pc.text(label=shot_cam.nodeName(), align="left", w=95)
             pc.text(label="Start", w=50, align="right")
             start_intField = pc.intField(
                 value=shot_cam.getAttr("mp_start"),
@@ -66,7 +66,7 @@ def create_cam_rows(cam_row_cl, scene, dept):
             pc.button(label="Unflag", c=pc.Callback(unflag_cam, cam_row_cl, shot_cam, scene, dept))
             pc.button(label="Export", c=pc.Callback(export_cam, shot_cam, scene))
         pc.separator(p=cam_row_cl)
-            
+
 
 def set_cam_start_end(intField, cam):
     cam.setAttr(intField.getAnnotation(), intField.getValue())
@@ -81,7 +81,7 @@ def unflag_cam(cam_row_cl, shot_cam, scene, dept):
 
 
 def ui(parent_cl, scene, dept, *args, **kwargs):
-    meta = read_meta()
+    # meta = read_meta()
     with pc.columnLayout(adj=True, p=parent_cl):
         pc.separator(style="in")
         with pc.horizontalLayout(bgc=COLOR.mid_grey, h=25) as hl:
