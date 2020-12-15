@@ -50,7 +50,7 @@ def create_cam_rows(cam_row_cl, scene, dept):
 
     for shot_cam in get_shotcams():
         with pc.rowLayout(nc=7, p=cam_row_cl):
-            cam_name_text = pc.text(label=shot_cam.nodeName(), align="left", w=95)
+            cam_name_text = pc.text(label=shot_cam.nodeName().split(":")[-1], align="left", w=95)
             pc.text(label="Start", w=50, align="right")
             start_intField = pc.intField(
                 value=shot_cam.getAttr("mp_start"),
