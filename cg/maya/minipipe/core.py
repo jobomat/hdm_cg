@@ -84,7 +84,7 @@ def export_cam(cam, scene):
 
     con = pc.parentConstraint(cam, cam_dup)
     pc.bakeResults(
-        cam_dup, simulation=True, t=(0,125), sampleBy=1, oversamplingRate=1,
+        cam_dup, simulation=True, t=(cam_dup.getAttr("mp_start"), cam_dup.getAttr("mp_end")), sampleBy=1, oversamplingRate=1,
         disableImplicitControl=True, preserveOutsideKeys=True, sparseAnimCurveBake=False,
         removeBakedAttributeFromLayer=False, removeBakedAnimFromLayer=False, bakeOnOverrideLayer=False,
         minimizeRotation=True, controlPoints=False, shape=True
