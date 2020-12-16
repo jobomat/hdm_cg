@@ -77,8 +77,8 @@ def export_cam(cam, scene):
         cam_dup.attr(attr).setKeyable(True)
     cam_shape = cam_dup.getShape()
     for attr in ["depthOfField", "displayCameraFrustum", "fStop", "focalLength", "focusDistance"]:
-        cam_dup.attr(attr).unlock()
-        cam_dup.attr(attr).setKeyable(True)
+        cam_shape.attr(attr).unlock()
+        cam_shape.attr(attr).setKeyable(True)
     
     pc.parent(cam_dup, w=True)
 
