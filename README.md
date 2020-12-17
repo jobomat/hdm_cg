@@ -120,6 +120,7 @@ Model versions of sets are not particulary useful. Switch to shading releases as
 
 ##### Details
 Release a rig as soon as it has the first useful features for your animators. Once your released rig is used (referenced) in an animation version of a shot think careful about what you can change without destroying the already made animation:
+
 You can:
 +  add new controllers and attributes to existing controllers.
 +  remove controllers and attributes that are not already keyed in a shot.
@@ -129,5 +130,5 @@ You should not:
 +  remove controllers and attributes that are already keyed in a shot.
 +  rename or regroup controllers that are already in use.
 
-Release the first shading version as soon as you grouped the objects referenced form the model release file by your liking and the model department provided a final model. Final means final object count, hirarchy and naming. If the prop is to be textured in also means final UVs. One could release a "not final" model-release for shading tests. For expample when final UVs are missing, testing shading parameters without applying textures is totally fine. Textures made on not final UVs are useless. Also note that per-face-assignments of shaders will be useless for models without final topology.
+Release the first shading version as soon as you grouped the objects (referenced from the model release file) by your liking and the model department provided a final model. Final means final object count, final hirarchy (grouping) and final naming. If the prop is to be textured in also means final UVs. One could release a "not final" model-release for shading tests. For expample when final UVs are missing, testing shading parameters without applying textures is totally fine. Textures made on not final UVs are useless. Also note that per-face-assignments of shaders will be useless for models without final topology.
 

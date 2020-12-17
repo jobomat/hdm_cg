@@ -65,7 +65,8 @@
             }, 
             "props": {
                 "shd": [
-                    "cg.maya.minipipe.actions.load_any_version"
+                    "cg.maya.minipipe.actions.load_any_version",
+                    "cg.maya.minipipe.actions.reload_shd_abc"
                 ], 
                 "mod": [
                     "cg.maya.minipipe.actions.load_any_version"
@@ -85,7 +86,8 @@
             }, 
             "sets": {
                 "shd": [
-                    "cg.maya.minipipe.actions.load_any_version"
+                    "cg.maya.minipipe.actions.load_any_version", 
+                    "cg.maya.minipipe.actions.create_reference"
                 ], 
                 "mod": [
                     "cg.maya.minipipe.actions.load_any_version", 

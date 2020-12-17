@@ -58,18 +58,36 @@ def create_first_shading_version(scene, dept, *args, **kwargs):
         update_status_message(msg)
 
 
+def write_new_abc(scene, dept, *args, **kwargs):
+    user = kwargs.get("user", "unknown")
+    out_layout = kwargs.get("out_layout", None)
+    update_status_message = kwargs.get("update_status_message", None)
+
+    meta = read_meta()
+
+    abc_file = normpath("{}/{}.abc".format(scene.absolute_path, scene.name))
+    alembic.abc_export(meta["abc_grp"], abc_file)
+
+    msg = ("success", "{}.abc updated. Don't forget to update shading files!".format(scene.absolute_path, scene.name))
+
+    if out_layout:
+        out_layout()
+    if update_status_message:
+        update_status_message(msg)
+
+
 def ui(parent_cl, scene, dept, *args, **kwargs):
-    if  scene.has_release("mod"):
+    if scene.has_release("mod"):
         if "shd" not in scene.get_depts():
             # pc.text(p=parent_cl, label="New UVs? Then you can:")
             pc.button(
                 p=parent_cl, label="Create first Shading Version + Cache from Selection",
                 c=pc.Callback(create_first_shading_version, scene, dept, *args, **kwargs)
             )
-        # else:
-        #     meta = read_meta()
-        #     pc.text(p=parent_cl, label="New UVs? Then:")
-        #     pc.button(
-        #         p=parent_cl, label="Write new Alembic Base/Shading Release ({}).".format(meta["abc_grp"])
-                
-        #     )
+        else:
+            meta = read_meta()
+            pc.text(p=parent_cl, label="New UVs? Then:")
+            pc.button(
+                p=parent_cl, label="Write new Alembic Base/Shading Release ({}).".format(meta["abc_grp"]),
+                c=pc.Callback(write_new_abc, scene, dept, *args, **kwargs)
+            )
