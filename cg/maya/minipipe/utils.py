@@ -107,14 +107,14 @@ def update_actions(mp_config):
     mp_config["project_base_path"] = project_base_path
 
     mp_template_dir = mp_config.get("mp_template_dir", "")
-    if not mp_template_dir or not os.path.isfile(mp_template_dir):
+    if not mp_template_dir or not os.path.isfile(os.path.normpath(mp_template_dir)):
         this_file_path = normpath(inspect.getfile(lambda: None))
         mp_template_dir = "{}/minipipe/setup_templates/ca_stupro".format(
             "/".join(this_file_path.split("/")[:-3]
         ))
     mp_config["mp_template_dir"] = mp_template_dir
 
-    with open("{}/files/minipipe_config.json".format(mp_template_dir)) as f:
+    with open(os.path.normpath("{}/files/minipipe_config.json".format(mp_template_dir))) as f:
         new_config = json.load(f)
     
     mp_config["actions"] = new_config["actions"]

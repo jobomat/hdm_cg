@@ -66,7 +66,10 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
                 p=parent_cl, label="Create first Shading Version + Cache from Selection",
                 c=pc.Callback(create_first_shading_version, scene, dept, *args, **kwargs)
             )
-        else:
-            meta = read_meta()
-            pc.text(p=parent_cl, label="New UVs? Then:")
-            pc.button(p=parent_cl, label="Write new Alembic Base ({}).".format(meta["abc_grp"]))
+        # else:
+        #     meta = read_meta()
+        #     pc.text(p=parent_cl, label="New UVs? Then:")
+        #     pc.button(
+        #         p=parent_cl, label="Write new Alembic Base/Shading Release ({}).".format(meta["abc_grp"])
+                
+        #     )

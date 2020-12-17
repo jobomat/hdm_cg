@@ -137,12 +137,12 @@
             "sets": {
                 "shd": [
                     "cg.maya.minipipe.actions.save_new_version", 
-                    "cg.maya.minipipe.actions.release"
+                    "cg.maya.minipipe.actions.release_set_shd"
                 ], 
                 "mod": [
                     "cg.maya.minipipe.actions.save_new_version", 
                     "cg.maya.minipipe.actions.release", 
-                    "cg.maya.minipipe.actions.create_shd_version"
+                    "cg.maya.minipipe.actions.release_set_shd"
                 ]
             }
         }

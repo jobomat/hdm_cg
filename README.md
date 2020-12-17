@@ -1,14 +1,14 @@
-# Rig-Tools, Minipipe and Stuff
+This Repo contains Rig-Tools, the Minipipe and other Stuff
 
-## Installation
+#1 Installation
 
-### Via Commandline / git bash
+##1.1 Via Commandline / git bash
 git clone https://github.com/jobomat/hdm_cg.git to the *desired location* on your computer.
 
-### As Zip-File
+##1.2 Via Zip-File
 Click the green "Code" Button above and download the repo as zip file. Unpack to your *desired location*
 
-## Setup
+#2 Setup
 1. Close Maya.
 2. Copy the Files *userSetup.py* and *config.json* from the folder *setup* to your *maya/scripts* location.
 + **Windows:** drive:\Users\\*username*\Documents\maya\scripts
@@ -16,8 +16,9 @@ Click the green "Code" Button above and download the repo as zip file. Unpack to
 + **Linux:** ~/maya/scripts
 3. Edit the *config.json*. The key *"GLOBAL_SETUP_PATH"* has to hold the path to *desired location*/hdm_cg. This may be another name based on your installation process. Make sure it points to the folder containing the *cg*, *maya* and *setup* folders.
 
-## Create New Minipipe Project
-This has only to be done once. If a coworker already has performed these steps and you want to join this project see the next section *"Switch to existing Minipipe Project"*.
+#3 Minipipe
+##3.1 Create a new Minipipe Project
+This has only to be done once. If a coworker already has performed these steps and you want to join this project see section *"3.3 Switch to existing Minipipe Project"*.
 
 1. Open Minipipe by clicking the new *HdM* Button on the toolbar in Maya (the bar on the left side beneath the *Show Outliner* Button).
 2. Click on *Settings*.
@@ -25,22 +26,28 @@ This has only to be done once. If a coworker already has performed these steps a
 4. Choose a *Minipipe Template* (ca_stupro).
 5. Click *Create Project*.
 
-## Switch to existing Minipipe Project
-In the *Settings* click *Choose Config* and load the *minipipe_config.json* which normally resides in *pipeline/minipipe* in the project folder.
+##3.2 Complete your Settings
 
-At the moment it is save to restart Minipipe after that by clicking on the *HdM* button again.
-
-## Set a Username
+###3.2.1 Set a Username
 In the Minipipe Settings under *Current User* choose a short username e.g. your shorthand HdM account name (xy123) and click *Save to Global Config File*.
 
 The user info is saved on a per-computer-account-basis. If you are working at the same project on different computers and/or under different user accounts but want to use the same user name in each environment, make sure to choose the same user name and save it to the global config for each computer/accout.
 
 You could choose different names to later differentiate from which account or computer a file was saved if that is of any use for you.
 
-## Working with Minipipe
+###3.2.2 Set a (Remote) Render Base Path
+The setting *Path at Render Location* should contain the path to your Maya at the location where you are planning to render your scenes at a render farm. At HdM this is typically one of the cg-drives (L:/, M:/, N:/) followed by the sub directories to your Maya project (eg. M:/MyProject/3d).
+
+##3.3 Switch to existing Minipipe Project
+In the *Settings* click *Choose Config* and load the *minipipe_config.json* which normally resides in *pipeline/minipipe* in the project folder.
+
+At the moment it is save to restart Minipipe after that by clicking on the *HdM* button again.
+
+
+##3.4 Working with Minipipe
 Minipipe is a folder- and filename-convention based load/save/reference/cache helper for your project (with a little meta-info here and there contained in the *"minipipe_meta"* node of the files saved or created with Minipipe).
 
-In short it suggests certain INPUT and OUTPUT actions based on the *type* (char, prop, set, shot, extra) and the existent *departments* (mod, rig, shd, ani, rnd) of a file in your project.
+In short it suggests certain INPUT and OUTPUT actions based on the *type* (char, prop, set, shot) and the existent *departments* (mod, rig, shd, ani, rnd) of a file in your project.
 
 It makes it easy to create versions, releases, references and caches. All executed actions are standard Maya actions that could also be performed the standard Maya way.
 
@@ -51,41 +58,75 @@ For example
 + it offers to create relative references of availible *chars* which already have a *rig release* if you are working in a file of type *shot*.
 + it offers to export alembic-caches of all referenced *chars* if you are working in a file of type *shot* in department *animation*.
 
-## How to start?
+You always can bypass this workflows with your own manualy executed standard Maya actions like referencing scenes, import/export caches and only use the parts of Minipipe that fit your needs.
 
-### Create new assets
+###3.4.1 Create new assets
 Create new assets by clicking on one of the asset types in the *"CREATE NEW"* section. The IN and OUT sections will offer different actions based on the type of the asset and the current stage / department.
 
 + **Character:** Assets that will later be rigged/animated. Typical examples are your "actors" (humans, animals, robots, drohnes...) and objects your "actors" will interact with (move).
 + **Prop:** Unanimated objects like furniture or parts of a landscape.
 + **Set:** A collection of props and some additional models for example a room or a landscape
 + **Shot:** A shot of your production containing sets, props, cameras, keyframed characters in stage *Animation* or cached characters and the shot lighting in stage *Rendering*.
-+ **Extras:** Things that fit non of the above mentioned categories.
++ **Extras:** Things that fit non of the above mentioned categories (Experimenatl atm).
 
 When you create a new asset, a folder structure will be created in your maya projects scene directory in a subdirectory called like the *type*. (For a character named *sam* it would create a folder *sam/* in *scenes/chars/* and inside the *sam* folder there will be a *versions/mod* and *release_history/mod* folder). It also creates a starter file  by copying and renaming the *scenes/initial.ma* to the *versions/mod*. You could adjust the *initial.ma* file if for example you want all your started assets to contain a specific node.
 
-### Save
-You can use the normal Maya save function by pressing ctrl + s.
+###3.4.2 Save
+You can use the normal Maya save function by pressing ctrl + s if you just want to overwrite the version you are working on.
 
-### Save new version
-If you want to keep the previous saved file and save your current changes under a new name, use the *"Save New Version"* button in the OUT tab. This will copy the current version into the *versions/-department-* folder and save your current scene with a new name.
+####3.4.2.1 Save new version
+If you want to keep the previous saved file and save your current changes under a new name, use the *"Save New Version"* button in the OUT tab. This will save your current scene under a new name in the *versions/-department-* folder.
 
-### Take a screenshot for your asset
+####3.4.2.2 Take a screenshot for your asset
 In the OUT tab you can click on the template image (a box for props, a house for sets...) to create a new thumbnail picture for your asset. At the moment two windows will be opened - a viewport and a "Capture Control" window. Use the viewport to frame your object and use the red "Capture" button to save the viewport image. If you change the viewport mode (textured view, antialiasing...) in your normal Maya viewport, these changes will be reflected in the capture window too.
 
-## What to do when?
-### Create a modeling release
-You can do this early in the process if you need access to unfinished models for set building or shot blocking purposes. Be aware that actions like freezing transforms, changing pivot points, changes to names or hirarchies may lead to unexpected results if the asset is already in use in another scene (e.g. a prop thats placed in a set will change position in the set if its pivot changes in the released model file).
+###3.4.3 Workflow
 
-If the model is released for deformation rigging the topology should not be changed anymore.
+####3.4.3.1 Modeling Department
+The modeling department exists for props, chars and sets. Models and UVs for props and characters are created here. Additional models in sets that are not explicit props (like walls) can be modeled and shaded here.
 
-### Create first Shading Version
-To create a first shading
-For **props** you create the first shading version out of the **model** department
-If it is planned to just assign a shader to the model (no per face assignments, no textures) a Shading Release can be done while the model is still worked on. However if names, hirarchies or object count changes it may be necessary to reassign the shaders manually.
+#####Quick overview of IN Actions
++  Open a specific version.
++  Sets: Pull in released props as references
 
-If you use per face assignments of shaders, changes to the topology of the model will result in loss of shader assignments in your shading file (you can always reassign your shaders manually).
+#####Quick overview of OUT Actions
++  Save a new version.
++  Characters: Create releases for rigging and create the first rigging version. The first shading version and shading releases for characters have to be done from the rigging stage.
++  Props: Create the first shading version from here when model (and ideally) UVs are finished.
++  Sets: Release model or shading version.
+
+#####Details
+Hand off a character model to rigging by creating a release and then create the first rig version. **IMPORTANT: If the model is released for deformation rigging the topology should not be changed anymore!**. The UVs on the other side do not have to be finished to release for rigging.
+
+For *Character* types (will be rigged) talk to the rigger about how to group your objects. Grouping can also happen in the rigging department, but ungrouping can't when working with references. When in doubt do not group anything in models of type character. This is the reason why shading releases for characters have to be triggered from the rigging department. As the grouping of objects is essential when working with caches and the final grouping may be decided up on in rigging department one only can create a "correct" first shading version from inside the rigging file.
+
+You can release models early in the process if you need access to unfinished models for set building or shot blocking purposes. Be aware that actions like freezing transforms, changing pivot points, changes to names or hirarchies may lead to unexpected results if the asset is already in use in another scene (e.g. a prop thats placed in a set will change position in the set if its pivot changes in the released model file).
+
+For props you create the first shading version out of the model department. If it is planned to just assign a shader to the model (no per face assignments, no textures) a shading release can be done while the model is still worked on! However if names, hirarchies or object-count changes it may be necessary to reassign the shaders manually. If you use per face assignments of shaders, changes to the topology of the model will result in loss of shader assignments in your shading file (you can always reassign your shaders manually).
 
 If you start to texture the asset be shure to also have final UVs before starting the texture process.
 
+Model versions of sets are not particulary useful. Switch to shading as soon as you want the animation department to find the set without any further hassle. Modeling and UVs for non-prop-addons can also be done in the shading versions of sets.
+
+####3.4.3.2 Rigging Department
+
+#####Quick overview of IN Actions
++  Open a specific version.
+
+#####Quick overview of OUT Actions
++  Save a new version.
++  Release a rig.
++  Create the first shading version.
+
+#####Details
+Release a rig as soon as it has the first useful features for your animators. Once your released rig is used (referenced) in an animation version of a shot think careful about what you can change without destroying the already made animation:
+You can:
++  add new controllers and attributes to existing controllers.
++  remove controllers and attributes that are not already keyed in a shot.
++  rework the internals of your deform and control rig that are not exposed to the animators.
+You should not:
++  remove controllers and attributes that are already keyed in a shot.
++  rename or regroup controllers that are already in use.
+
+Release the first shading version as soon as you grouped the objects referenced form the model release file by your liking and the model department provided a final model. Final means final object count, hirarchy and naming. If the prop is to be textured in also means final UVs. One could release a "not final" model-release for shading tests. For expample when final UVs are missing, testing shading parameters without applying textures is totally fine. Textures made on not final UVs are useless. Also note that per-face-assignments of shaders will be useless for models without final topology.
 
