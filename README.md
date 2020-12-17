@@ -91,22 +91,22 @@ The modeling department exists for props, chars and sets. Models and UVs for pro
 
 ##### Quick overview of OUT Actions
 +  Save a new version.
-+  Characters: Create releases for rigging and create the first rigging version. The first shading version and shading releases for characters have to be done from the rigging stage.
++  Characters: Create releases and create the first rigging version. The first shading version and shading releases for characters have to be done from the rigging stage.
 +  Props: Create the first shading version from here when model (and ideally) UVs are finished.
-+  Sets: Release model or shading version.
++  Sets: Release model or shading version (preferably shading! See last Paragraph in *Details*).
 
 ##### Details
-Hand off a character model to rigging by creating a release and then create the first rig version. **IMPORTANT: If the model is released for deformation rigging the topology should not be changed anymore!**. The UVs on the other side do not have to be finished to release for rigging.
+Hand off a character model to rigging by creating a release and then create the first rig version. **IMPORTANT: If the model is released for deformation rigging the topology should not be changed anymore!** The UVs on the other side do not have to be finished to release for rigging.
 
-For *Character* types (will be rigged) talk to the rigger about how to group your objects. Grouping can also happen in the rigging department, but ungrouping can't when working with references. When in doubt do not group anything in models of type character. This is the reason why shading releases for characters have to be triggered from the rigging department. As the grouping of objects is essential when working with caches and the final grouping may be decided up on in rigging department one only can create a "correct" first shading version from inside the rigging file.
+For *character* types (will be rigged) talk to the rigger about how to group your objects. Grouping can also happen in the rigging department, but ungrouping can't when working with references. When in doubt do not group anything in models of type character. This is the reason why shading releases for characters have to be triggered from the rigging department. As the grouping of objects is essential when working with caches and the final grouping may be decided up on in rigging department, one only can create a "correct" first shading version from inside the rigging file.
 
 You can release models early in the process if you need access to unfinished models for set building or shot blocking purposes. Be aware that actions like freezing transforms, changing pivot points, changes to names or hirarchies may lead to unexpected results if the asset is already in use in another scene (e.g. a prop thats placed in a set will change position in the set if its pivot changes in the released model file).
 
-For props you create the first shading version out of the model department. If it is planned to just assign a shader to the model (no per face assignments, no textures) a shading release can be done while the model is still worked on! However if names, hirarchies or object-count changes it may be necessary to reassign the shaders manually. If you use per face assignments of shaders, changes to the topology of the model will result in loss of shader assignments in your shading file (you can always reassign your shaders manually).
+For props you create the first shading version out of the model department. If it is planned to just assign a shader to the model (no per face assignments, no textures) a shading release can be done while the model is still worked on! However if names, hirarchies or object-count changes, it may be necessary to reassign the shaders manually. If you use per face assignments of shaders, changes to the topology of the model will result in loss of shader assignments in your shading file (you can always reassign your shaders manually).
 
 If you start to texture the asset be shure to also have final UVs before starting the texture process.
 
-Model versions of sets are not particulary useful. Switch to shading as soon as you want the animation department to find the set without any further hassle. Modeling and UVs for non-prop-addons can also be done in the shading versions of sets.
+Model versions of sets are not particulary useful. Switch to shading releases as soon as you want the animation department to find the set without any further hassle (normaly ASAP). Modeling and UVs for non-prop-addons can also be done in the shading versions of sets.
 
 #### 3.4.3.2 Rigging Department
 
@@ -124,6 +124,7 @@ You can:
 +  add new controllers and attributes to existing controllers.
 +  remove controllers and attributes that are not already keyed in a shot.
 +  rework the internals of your deform and control rig that are not exposed to the animators.
+
 You should not:
 +  remove controllers and attributes that are already keyed in a shot.
 +  rename or regroup controllers that are already in use.
