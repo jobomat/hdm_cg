@@ -132,3 +132,53 @@ You should not:
 
 Release the first shading version as soon as you grouped the objects (referenced from the model release file) by your liking and the model department provided a final model. Final means final object count, final hirarchy (grouping) and final naming. If the prop is to be textured in also means final UVs. One could release a "not final" model-release for shading tests. For expample when final UVs are missing, testing shading parameters without applying textures is totally fine. Textures made on not final UVs are useless. Also note that per-face-assignments of shaders will be useless for models without final topology.
 
+#### 3.4.3.3 Shading Department
+
+##### Quick overview of IN Actions
++  Open a specific version.
++  Update Model (Merge in a new Alembic-Base-Mesh)
+
+##### Quick overview of OUT Actions
++  Release a shading file.
+
+##### Details
+The update process is necessary if the model department changed any shading-relevant parameters:
+
++  A change in topology if there are per-face-assignments of shaders. In this case the assignments will be lost in parts or completely and you'll have to reassign the shaders. 
++  Changed UVs if you are using texture maps
+
+If you use object-assigned shaders without uv-based texture maps an update is not necessary unless the modeling/rigging department made changes to hirarchy or names. In this case it even could be necessary to delete the model group and import the updated cache via "Cache > Alembic Cache > Import" ("Add" NOT "Merge" in the Options). All shader assignments will be lost and have to be redone in this case.
+
+#### 3.4.3.4 Animation Department
+
+The animation department acts on sequences rather than shots. A sequence is a somehow connected series of shots. For example a sequence could contain a continous action of one or more characters that will be showed from different camera angles. In this example the different camera angles represent the shots. The idea of a sequence is that it contains the animation in one piece (and maybe also shares a basic light-setup that will be augmentet with more lights on a per-shot-basis).
+
+An animation-type asset ideally only contains the sets, props, characters and cameras of a sequence but no lights of other render specific items.
+
+##### Quick overview of IN Actions
++  Open a specific version.
++  Pull in rig-releases of characters.
++  Pull in shading-releases of sets.
++  Pull in any other asset if necessary.
+
+##### Quick overview of OUT Actions
++  Flag cameras as relevant "shot cameras" with frame ranges and export option.
++  Create caches for the characters of the sequence.
++  Create the Shots of the Sequence.
+
+##### Details
+To pull in other types than characters and sets or other department stages than rig and shading just remove the respective checkboxes on the bottom of the "Create Reference" list.
+
+To remove references use the normal Maya way to do this (In the Outliner right-click on a reference node and choose "Remove" from the "Reference" sub menu).
+
+If you flag a camera as "shot camera" it will be easy exportable. Furthermore the camera movement will automatically be baked before exporting it. The aim is to clearly seperate tasks between animation and lighting/rendering department. Camera movement should not be done or edited in the lighting/rendering department. On the other hand it is not recommended to add lights in the animation department.
+
+Caches will be exported to the "caches" subfolder of the current shot. Already existing caches of the same name will be replaced but the old version will be copied to "caches/archives" beforehand.
+
+On creating the "Render Versions" (AKA Shots) you can decide what will be present in the shot-files:
+
++  For characters you can replace the rig versions of the characters with the shading version.
++  For cameras you can bake and export the flagged cameras and reference the resulting files in the created shot file.
+
+Both actions can safely be done quite early in the process. New camera movements and character animations can always be exportet again and will find their way into the shot files.
+
