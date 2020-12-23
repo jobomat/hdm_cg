@@ -195,5 +195,8 @@ Both actions can safely be done quite early in the process. New camera movements
 
 ##### Quick overview of OUT Actions
 +  Save a new Version.
-+  Release a Render File.
++  Release a Render File (with replacement of Alembic paths!)
 +  Create a RenderPal Render-Set
+
+##### Details
+To create a RenderSet you have to create a Release-File first. This is because only in the Releases the correct paths for Alembic caches relative to the render location will be set.
