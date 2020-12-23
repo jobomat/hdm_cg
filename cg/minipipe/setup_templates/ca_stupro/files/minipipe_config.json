@@ -126,7 +126,8 @@
             "shots": {
                 "ren": [
                     "cg.maya.minipipe.actions.save_new_version", 
-                    "cg.maya.minipipe.actions.release"
+                    "cg.maya.minipipe.actions.release",
+                    "cg.maya.minipipe.actions.create_render_set"
                 ], 
                 "ani": [
                     "cg.maya.minipipe.actions.save_new_version", 

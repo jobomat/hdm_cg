@@ -10,14 +10,15 @@ from cg.maya.minipipe import colors
 reload(colors)
 COLOR = colors.COLOR
 
+
 def select_grp(namespace, grp):
     pc.select("{}:{}".format(namespace, grp.split(":")[-1]))
 
 
 def create_caches_menu(scene, namespace):
     caches_dir = "{}/caches".format(scene.absolute_path)
-    _, dirs, files = next(os.walk(caches_dir))
     try:
+        _, dirs, files = next(os.walk(caches_dir))
         for file in [f for f in files if f.endswith(".abc")]:
             pc.menuItem(file)
     except StopIteration:

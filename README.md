@@ -162,6 +162,7 @@ An animation-type asset ideally only contains the sets, props, characters and ca
 +  Pull in any other asset if necessary.
 
 ##### Quick overview of OUT Actions
++  Save a new Version.
 +  Flag cameras as relevant "shot cameras" with frame ranges and export option.
 +  Create caches for the characters of the sequence.
 +  Create the Shots of the Sequence.
@@ -180,5 +181,19 @@ On creating the "Render Versions" (AKA Shots) you can decide what will be presen
 +  For characters you can replace the rig versions of the characters with the shading version.
 +  For cameras you can bake and export the flagged cameras and reference the resulting files in the created shot file.
 
-Both actions can safely be done quite early in the process. New camera movements and character animations can always be exportet again and will find their way into the shot files.
+Both actions can safely be done quite early in the process. New camera movements and character animations can always be exported again and will find their way into the shot files.
 
+#### 3.4.3.5 Render (Lighting) Department
+
+##### Quick overview of IN Actions
++  Open a specific version of a specific Variant (Shot).
++  Pull in shading-releases of characters.
++  Pull in shading-releases of sets.
++  Pull in any other asset if necessary.
++  Pull in a cache for every asset of type character.
++  Pull in a baked Camera from Animation Department.
+
+##### Quick overview of OUT Actions
++  Save a new Version.
++  Release a Render File.
++  Create a RenderPal Render-Set

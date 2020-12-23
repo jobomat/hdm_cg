@@ -23,16 +23,18 @@ def create_reference(scene, cam_optionMenu, *args, **kwargs):
 
 
 def create_camera_items(scene):
-    _, dirs, files = next(os.walk("{}/cameras".format(scene.absolute_path)))
-    for f in [f for f in files if f.endswith(".ma")]:
-        pc.menuItem(f)
+    camera_dir = "{}/cameras".format(scene.absolute_path)
+    if os.path.isdir(camera_dir):
+        _, dirs, files = next(os.walk("{}/cameras".format(scene.absolute_path)))
+        for f in [f for f in files if f.endswith(".ma")]:
+            pc.menuItem(f)
 
 
 def ui(parent_cl, scene, dept, *args, **kwargs):
     current_scene = kwargs.get("current_scene", None)
     current_scene_dept = kwargs.get("current_scene_dept", None)
-    config = kwargs.get("config")
-    
+    # config = kwargs.get("config")
+
     if current_scene and current_scene.name == scene.name and current_scene_dept == dept:
         with pc.rowLayout(nc=3, adj=2):
             pc.text(label="Import Cam Reference:", align="left", font="boldLabelFont")
