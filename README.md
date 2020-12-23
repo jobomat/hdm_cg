@@ -200,3 +200,7 @@ Both actions can safely be done quite early in the process. New camera movements
 
 ##### Details
 To create a RenderSet you have to create a Release-File first. This is because only in the Releases the correct paths for Alembic caches relative to the render location will be set.
+
+The renderset files will be created in the "rendersets" folder of the **shot** and will be copied to the "rendersets" folder of the **project**. In that way you do not have to change folders all the time when importing a renderset in RenderPal.
+
+If a renderset with the same name already exists this older file will be copied to the "rendersets/archive" folder with an added timestamp at the start of the filename before the file is overwritten. 
