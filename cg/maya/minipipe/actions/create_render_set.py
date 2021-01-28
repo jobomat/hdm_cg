@@ -224,7 +224,7 @@ def ui(parent_cl, scene, dept, *args, **kwargs):
             variant_release = [r[1] for r in scene.releases if r[1].endswith(variant + "_ren.ma")]
             text = "Please Release this Version before Rendering!"
             if variant_release:
-                text = "{}/scenes/{}/{}".format(
+                text = "{}/scenes/shots/{}/{}".format(
                     render_base_path, scene.name, variant_release[0].split("/")[-1]
                 )
             with pc.rowLayout(nc=2, adj=2, cw=(1, 120)):
