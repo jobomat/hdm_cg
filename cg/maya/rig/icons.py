@@ -3,12 +3,12 @@ import os
 import json
 import pymel.core as pc
 from cg.maya.viewport.wireframe import colorize
-from cg.maya.geo.shapes import rotate_shapes
+from cg.maya.geo.shapes import rotate_shapes, set_unrenderable
 import cg.maya.geo.curves as curves
 from cg.general.names import get_legal_character
 import cg.maya.utils.hirarchies as hir
 from cg.maya.rig.ctrl import slider_control, four_corner_control
-from cg.maya.geo.polys import poly_text
+from cg.maya.geo.polys import poly_text, set_vertex_wire_color
 reload(hir)
 reload(curves)
 
@@ -180,6 +180,55 @@ class RigIcons():
                             label="Choose Color...",
                             c=pc.Callback(self.choose_color, i)
                         )
+
+                pc.separator(h=10)
+
+                with pc.horizontalLayout():
+                    pc.button(
+                        "Shaded",
+                        c=pc.Callback(self.set_shapes_attr, "overrideShading", 1)
+                    )
+                    pc.button(
+                        "Unshaded",
+                        c=pc.Callback(self.set_shapes_attr, "overrideShading", 0)
+                    )
+                    pc.button(
+                        "Selectable",
+                        c=pc.Callback(self.set_shapes_attr, "overrideDisplayType", 0)
+                    )
+                    pc.button(
+                        "Not Selectable",
+                        c=pc.Callback(self.set_shapes_attr, "overrideDisplayType", 2)
+                    ) 
+
+                pc.separator(h=10)
+
+                with pc.horizontalLayout(ratios=[2,1,1,1,1,1]):
+                    pc.text(label="Toggle Lock+Hide")
+                    pc.button(
+                        "Trans",
+                        c=pc.Callback(self.toggle_lock_hide, ["tx", "ty", "tz"])
+                    )
+                    pc.button(
+                        "Rot",
+                        c=pc.Callback(self.toggle_lock_hide, ["rx", "ry", "rz"])
+                    )
+                    pc.button(
+                        "Scale",
+                        c=pc.Callback(self.toggle_lock_hide, ["sx", "sy", "sz"])
+                    )
+                    pc.button(
+                        "Vis",
+                        c=pc.Callback(self.toggle_lock_hide, ["visibility"])
+                    ) 
+                    pc.button(
+                        "All",
+                        c=pc.Callback(
+                            self.toggle_lock_hide,
+                            ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "visibility"])
+                    ) 
+                    
+
         # self.adjustButtonPanelHeight()
 
     def create_icon_button(self, i):
@@ -335,4 +384,21 @@ class RigIcons():
 
     def create_text(self, *args):
         text = self.name_textFieldGrp.getText() or "Text"
-        poly_text(text)
+        text_transform = poly_text(text)
+        if text_transform:
+            set_unrenderable(text_transform.getShapes())
+            set_vertex_wire_color(
+                text_transform, 
+                self.config["palette"][self.config["std_color"]]
+            )
+
+    def set_shapes_attr(self, attr, value):
+        for obj in pc.selected():
+            for shape in obj.getShapes():
+                shape.setAttr(attr, value)
+
+    def toggle_lock_hide(self, channels):
+        for obj in pc.selected():
+            for channel in channels:
+                obj.attr(channel).setKeyable(not obj.attr(channel).isKeyable())
+                obj.attr(channel).setLocked(not obj.attr(channel).isLocked())

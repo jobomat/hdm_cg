@@ -244,13 +244,11 @@ def attach_group_to_edge(edge, name="test", grp_count=1, ctrl=True):
         pnt_on_crv_grp.setAttr("uPos", i * u_step)
 
         if ctrl:
-            offset_grp_1 = pc.group(empty=True, name="{}_offset_grp1".format(name))
-            offset_grp_2 = pc.group(empty=True, name="{}_offset_grp2".format(name))
+            offset_grp = pc.group(empty=True, name="{}_offset_grp".format(name))
             ctrl = pc.circle(n="{}_ctrl".format(name), radius=0.2)[0]
             pc.delete(ctrl, ch=True)
-            pc.parent(offset_grp_2, offset_grp_1)
-            pc.parent(ctrl, offset_grp_2)
-            pc.parent(offset_grp_1, pnt_on_crv_grp)
+            pc.parent(ctrl, offset_grp)
+            pc.parent(offset_grp, pnt_on_crv_grp)
 
         curve_from_edge.setAttr("edgeIndex[0]", edge_num)
         curve_from_edge.outputCurve >> point_on_curve_info.inputCurve

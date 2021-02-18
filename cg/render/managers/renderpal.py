@@ -10,24 +10,24 @@ RP_RENDERERS_JSON = join(normpath(dirname(__file__)), "renderpal_renderers.json"
 RP_POOLS_JSON = join(normpath(dirname(__file__)), "renderpal_pools.json")
 
 
-def listrenderers():
+def listrenderers(ignore_cache=False):
     """
     Gets "cached" rendererlist from RP_RENDERERS_JSON. [fast]
     If RP_RENDERERS_JSON is non existent calls RenderPal via listrenderers(). [slow]
     """
-    if os.path.exists(RP_RENDERERS_JSON) and os.path.isfile(RP_RENDERERS_JSON):
+    if not ignore_cache and (os.path.exists(RP_RENDERERS_JSON) and os.path.isfile(RP_RENDERERS_JSON)):
         with open(RP_RENDERERS_JSON) as renderer_json:
             r_dict = json.load(renderer_json, object_pairs_hook=OrderedDict)
         return r_dict
     return listrenderers_cmd()
 
 
-def listpools():
+def listpools(ignore_cache=False):
     """
     Gets "cached" pool list from RP_POOLS_JSON. [fast]
     If RP_POOLS_JSON is non existent calls RenderPal via listrenderers(). [slow]
     """
-    if os.path.exists(RP_POOLS_JSON) and os.path.isfile(RP_POOLS_JSON):
+    if if not ignore_cache and (os.path.exists(RP_POOLS_JSON) and os.path.isfile(RP_POOLS_JSON)):
         with open(RP_POOLS_JSON) as pools_json:
             pools = json.load(pools_json)
         return pools
@@ -35,6 +35,10 @@ def listpools():
 
 
 def listrenderers_cmd():
+    """
+    Parse the -listrenderers rpcmd flag result and returns a dict.
+    Creates a JSON cache file with the result.
+    """
     rp_return = cmd("-listrenderers")
     plain_list = [
         v.replace(" *", "")

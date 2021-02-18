@@ -41,7 +41,7 @@ def create_on_mesh_control(vtx, orig_geo_shape, name="on_mesh",
         attach_grp.setAttr("uPos", 1)
 
     offset_grp = attach_grp.getChildren()[0]
-    ctrl = offset_grp.getChildren()[0].getChildren()[0]
+    ctrl = offset_grp.getChildren()[0]
 
     # connect ctrl and cluster attributes
     attrs = ["translate", "rotate", "scale"]
@@ -62,10 +62,11 @@ def create_on_mesh_control(vtx, orig_geo_shape, name="on_mesh",
     pc.select(ctrl, r=True)
 
 
-def glue_to_shape(ctrl, shape):
-    curve_from_edge = get_curveFromMeshEdge_node(ctrl)
-    if curve_from_edge:
-        shape.worldMesh.worldMesh[0] >> curve_from_edge.inputMesh
+def glue_to_shape(ctrls, shape):
+    for ctrl in ctrls:
+        curve_from_edge = get_curveFromMeshEdge_node(ctrl)
+        if curve_from_edge:
+            shape.worldMesh.worldMesh[0] >> curve_from_edge.inputMesh
 
 
 def get_curveFromMeshEdge_node(controler):
@@ -176,7 +177,7 @@ class StickyControl():
         self.maintain_orient_offset = True
         self.edit_ui = defaultdict(dict)
         self.edit_action = None
-        self.edit_controler = None
+        self.edit_controlers = []
         self.edit_attach_mesh = None
         self.edit_orient_object = None
 
@@ -237,7 +238,7 @@ class StickyControl():
                             self.edit_sticky_ctrl_textFieldGrp = pc.textFieldButtonGrp(
                                 text="No Controler specified", buttonLabel="Set selected",
                                 cw2=[120, 80], adj=1, enable=True, editable=False,
-                                bc=self.set_edit_controler
+                                bc=self.set_edit_controlers
                             )
 
                             pc.separator(h=1)
@@ -262,7 +263,8 @@ class StickyControl():
                             )
                             self.edit_ui["orient"]["textFieldButtonGrp"] = pc.textFieldButtonGrp(
                                 text="No object specified", buttonLabel="Set selected",
-                                cw2=[120, 80], adj=1, enable=False, editable=False
+                                cw2=[120, 80], adj=1, enable=False, editable=False,
+                                bc=self.set_orient_object
                             )
                             self.edit_ui["orient"]["checkBox"] = pc.checkBox(
                                 label="Maintain orient offset", value=True, enable=False
@@ -293,22 +295,36 @@ class StickyControl():
         if self.edit_action == "reweight":
             self.reweight_cluster()
         elif self.edit_action == "attach":
-            glue_to_shape(self.edit_controler, self.edit_attach_mesh)
-        else:
-            pc.warning("Not yet implemented.")
+            glue_to_shape(self.edit_controlers, self.edit_attach_mesh)
+        elif self.edit_action == "orient":
+            self.replace_orient_constraint()
 
-    def set_edit_controler(self, *args):
+    def replace_orient_constraint(self):
+        for controler in self.edit_controlers:
+            pc.orientConstraint(
+                self.edit_orient_object,
+                controler.getParent().getParent(),
+                mo=self.edit_ui["orient"]["checkBox"].getValue()
+            )
+
+    def set_edit_controlers(self, *args):
+        self.edit_controlers = []
         sel = pc.selected()
-        if sel:
-            ctrl = sel[0]
+        for ctrl in sel:
             self.edit_cl_handle, self.edit_cl_shape, self.edit_cluster = self.get_cluster_from_ctrl(ctrl)
             if self.edit_cl_handle:
                 self.edit_sticky_ctrl_textFieldGrp.setText(sel[0])
-                self.edit_controler = sel[0]
-                self.check_edit_prerequisites()
-                return
-        self.edit_sticky_ctrl_textFieldGrp.setText("Object is no Sticky Controler")
-        self.edit_controler = None
+                self.edit_controlers.append(ctrl) 
+        self.check_edit_prerequisites()
+        if not self.edit_controlers:
+            self.edit_sticky_ctrl_textFieldGrp.setText("No Controler specified")
+        elif len(self.edit_controlers) == 1:
+            self.edit_sticky_ctrl_textFieldGrp.setText(self.edit_controlers[0])
+        else:
+            self.edit_sticky_ctrl_textFieldGrp.setText("Multiple (Hover for Info)")
+            self.edit_sticky_ctrl_textFieldGrp.setAnnotation(
+                "\n".join([c.name() for c in self.edit_controlers])
+            )
 
     def set_attach_mesh(self, *args):
         sel = pc.selected()
@@ -322,7 +338,10 @@ class StickyControl():
         self.check_edit_prerequisites()
 
     def set_orient_object(self):
-        pass
+        sel = pc.selected()
+        if sel:
+            self.edit_orient_object = sel[0]
+            self.edit_ui["orient"]["textFieldButtonGrp"].setText(sel[0])
 
     def toggle_edit_ui_enable(self, section):
         self.edit_action = section
@@ -336,7 +355,7 @@ class StickyControl():
         self.check_edit_prerequisites()
 
     def check_edit_prerequisites(self):
-        if not self.edit_controler or not self.edit_action:
+        if not self.edit_controlers or not self.edit_action:
             self.edit_button.setEnable(False)
             return
         elif self.edit_action == "attach" and not self.edit_attach_mesh:
