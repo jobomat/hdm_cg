@@ -31,7 +31,7 @@ The user info is saved on a per-computer-account-basis. If you are working at th
 You could choose different names to later differentiate from which account or computer a file was saved if that is of any use for you.
 
 ### 3.2.2 Set a (Remote) Render Base Path
-The setting *Path at Render Location* should contain the path to your Maya at the location where you are planning to render your scenes at a render farm. At HdM this is typically one of the cg-drives (L:/, M:/, N:/) followed by the sub directories to your Maya project (eg. M:/MyProject/3d).
+The setting *Path at Render Location* should contain the path to your Maya project at the location where you are planning to render your scenes at a render farm. At HdM this is typically one of the cg-drives (L:/, M:/, N:/) followed by the sub directories to your Maya project (eg. M:/MyProject/3d).
 
 ## 3.3 Switch to existing Minipipe Project
 In the *Settings* click *Choose Config* and load the *minipipe_config.json* which normally resides in *pipeline/minipipe* in the project folder.
