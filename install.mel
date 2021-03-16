@@ -1,0 +1,23 @@
+string $install_script_location=`get_install_script_location`;
+if (`gmatch $install_script_location "*\*"`)
+	$install_script_location=`substituteAllString $install_script_location "\\" "/"`;
+
+python("import sys\nsys.path.append('" + $install_script_location + "/cg')\nimport install as ip\nreload(ip)\nip.install('" + $install_script_location + "')");
+
+global proc install_script_locator_helper(){}
+
+
+global proc string get_install_script_location()
+{
+string $whatIs=`whatIs install_script_locator_helper`;
+string $full_path=`substring $whatIs 25 999`;
+string $buffer[];
+string $slash="/";
+if (`gmatch $whatIs "*\\\\*"`)//sourced from ScriptEditor
+	$slash="\\";
+int $num_tokens=`tokenize $full_path $slash $buffer`;
+int $num_letters=size($full_path);
+int $num_letters_last_folder=size($buffer[$num_tokens-1]);
+string $script_location=`substring $full_path 1 ($num_letters-$num_letters_last_folder)`;
+return $script_location;
+}

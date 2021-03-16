@@ -9,12 +9,7 @@ git clone https://github.com/jobomat/hdm_cg.git to the *desired location* on you
 Click the green "Code" Button above and download the repo as zip file. Unpack to your *desired location*
 
 # 2 Setup
-1. Close Maya.
-2. Copy the Files *userSetup.py* and *config.json* from the folder *setup* to your *maya/scripts* location.
-+ **Windows:** drive:\Users\\*username*\Documents\maya\scripts
-+ **Mac:** /Users/username/Library/Preferences/Autodesk/maya/scripts
-+ **Linux:** ~/maya/scripts
-3. Edit the *config.json*. The key *"GLOBAL_SETUP_PATH"* has to hold the path to *desired location*/hdm_cg. This may be another name based on your installation process. Make sure it points to the folder containing the *cg*, *maya* and *setup* folders.
+Just drop the file *install.mel* into the viewport of a running Maya instance. You may be asked if you want to modify an existing config file and replace the userSetup.py if an older version is already installed or you have an own userSetup.py working. Edits to the config are not dangerous wereas replacement of self generated or edited userSetups may not be wanted. If your userSetup.py was created by an old version of this tools and you did not edit the userSetup.py you can safely replace the file. 
 
 # 3 Minipipe
 ## 3.1 Create a new Minipipe Project

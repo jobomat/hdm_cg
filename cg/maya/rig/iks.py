@@ -32,14 +32,10 @@ def ik_stretch(ik_handle, pole=None, lock=False, max_stretch=5, name=None, paren
     joints = ik_handle.getJointList()
     joints.append(joints[-1].getChildren(type="joint")[0])
 
-    dag_name = None
-    if name:
-        dag_name = name
-    else:
-        name = "{}_{}".format(joints[0].name(), joints[-1].name())
+    name = name or "{}_{}".format(joints[0].name(), joints[-1].name())
 
-    start_loc = locator_at_point(joints[0], name="{}_start".format(dag_name))
-    end_loc = locator_at_point(joints[-1], name="{}_end".format(dag_name))
+    start_loc = locator_at_point(joints[0], name="{}_start".format(name))
+    end_loc = locator_at_point(joints[-1], name="{}_end".format(name))
 
     div_node = pc.createNode("multiplyDivide", name="{}_stretch_div".format(name))
 
@@ -93,6 +89,8 @@ def ik_stretch(ik_handle, pole=None, lock=False, max_stretch=5, name=None, paren
 
 def apply_curve_based_scale(ik_handle, name=None):
     joints = ik_handle.getJointList()
+    if name is None:
+    	name = joints[0].name()
     ik_curve = pc.PyNode(ik_handle.getCurve())
 
     crv_info = pc.createNode("curveInfo", name="{}_ik_crvinfo".format(name))
@@ -105,7 +103,7 @@ def apply_curve_based_scale(ik_handle, name=None):
     for joint in joints:
         div_node.outputX >> joint.scaleX
 
-    return joints, div_node
+    return joints, ik_curve, crv_info, div_node
 
 
 def stretchy_spline_ik(name=None, curve_spans=4):
@@ -227,7 +225,7 @@ class StretchyIK():
         else:
             if sel[0].type() == "ikHandle":
                 pass
-            elif sel[1].type("ikHandle"):
+            elif sel[1].type() == "ikHandle":
                 pass
             else:
                 self.hint("One of the selected objects\nhas to be an IK Handle.")

@@ -1,7 +1,10 @@
 # coding: utf8
+import sys
 import os
 import json
+
 import pymel.core as pc
+
 from cg.maya.viewport.wireframe import colorize
 from cg.maya.geo.shapes import rotate_shapes, set_unrenderable
 import cg.maya.geo.curves as curves
@@ -13,9 +16,18 @@ reload(hir)
 reload(curves)
 
 
+this = sys.modules[__name__]
+this.icons = None
+
+
 class RigIcons():
     """
     Maya tool for creating and editing NURBS curve based rig icons.
+    
+    import cg.maya.rig.icons as ri
+
+    rig_icons = ri.RigIcons()
+    rig_icons.create_rig_icon(1, snap_to=pc.selected()[0])
     """
 
     def __init__(self, config_file=None):
@@ -77,7 +89,11 @@ class RigIcons():
 
     def load_icons(self):
         with open(os.path.join(self.config['icons_folder'], "icons.json"), mode="r") as icf:
-            self.icons = json.load(icf)
+            if this.icons is None:
+                print("Loading icon.json...")
+                this.icons = json.load(icf)
+            self.icons = this.icons
+
 
     def gui(self):
         if pc.window(self.window_name, exists=True):
@@ -265,7 +281,7 @@ class RigIcons():
         sel = pc.selected()
         transforms = []
 
-        if len(sel):
+        if len(sel) > 1:
             for j, obj in enumerate(sel):
                 n = ""
                 if name:
@@ -274,6 +290,8 @@ class RigIcons():
                     n = obj.name()
                     n = "_".join(n.split("_")[:-1]) or n
                 transforms.append(self.create_rig_icon(i, n, group, obj))
+        elif len(sel) == 1:
+            transforms.append(self.create_rig_icon(i, name, group, sel[0]))
         else:
             transforms.append(self.create_rig_icon(i, name, group))
         pc.select(transforms)
@@ -284,7 +302,8 @@ class RigIcons():
         top_transform = self.create_curve_hirarchy(
             self.icons[i]['transforms'], name
         )
-        if snap_to:
+        if snap_to and snap_to.hasAttr("tx"):
+            print snap_to.type()
             cnstr = pc.parentConstraint(snap_to, top_transform)
             pc.delete(cnstr)
         if self.config['std_color']:
@@ -402,3 +421,6 @@ class RigIcons():
             for channel in channels:
                 obj.attr(channel).setKeyable(not obj.attr(channel).isKeyable())
                 obj.attr(channel).setLocked(not obj.attr(channel).isLocked())
+
+    def list(self):
+        print("\n".join("{}: {}".format(i, icon["name"]) for i, icon in enumerate(this.icons)))

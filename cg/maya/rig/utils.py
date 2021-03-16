@@ -106,8 +106,8 @@ def get_free_md_channels(
     """Returns the first free channel of a given multiplyDivide node.
     If no node is given or no channel is availible creates a new node.
 
-    :param node: The node
-    :type node: :class:`pymel.core.nodetypes`
+    :param node: The multiplyDivide node
+    :type node: :class:`pymel.core.nodetypes.multiplyDivide`
     :param name: Name of the node to create.
     :type name: str
 
@@ -157,7 +157,7 @@ def insert_normalized_scale_node(unnormalized_attr, scalefactor_attr, normalize_
     unnormalized_attr_node = unnormalized_attr.node()
     name = name or unnormalized_attr_node.name()[:-4]
 
-    dest_attr = unnormalized_attr.listConnections(plugs=True)[0]
+    dest_attrs = unnormalized_attr.listConnections(plugs=True)
 
     normalize_node_channels = get_free_md_channels(
         node=normalize_node, name="{}_normalize_div".format(name)
@@ -168,7 +168,8 @@ def insert_normalized_scale_node(unnormalized_attr, scalefactor_attr, normalize_
 
     unnormalized_attr >> normalize_node_channels[0]
     scalefactor_attr >> normalize_node_channels[1]
-    normalize_node_channels[2] >> dest_attr
+    for dest_attr in dest_attrs:
+	    normalize_node_channels[2] >> dest_attr
 
     return normalize_node
 
