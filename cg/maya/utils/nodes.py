@@ -24,6 +24,7 @@ def create_frame_caches(num_caches, anim_attr, name=None):
 
     """
     name = name or anim_attr.name().split(".")[-1]
+    name = name.replace(".", "_")
     animcurve_node = anim_attr.connections()[0]
 
     keys = pc.keyframe(anim_attr, q=True, valueChange=True, timeChange=True)

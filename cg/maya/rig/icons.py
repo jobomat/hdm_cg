@@ -200,45 +200,49 @@ class RigIcons():
                 pc.separator(h=10)
 
                 with pc.horizontalLayout():
-                    pc.button(
-                        "Shaded",
+                    pc.iconTextButton(
+                        label="Shaded", style="textOnly", font="smallPlainLabelFont", bgc=(0.35,0.4,0.45),
                         c=pc.Callback(self.set_shapes_attr, "overrideShading", 1)
                     )
-                    pc.button(
-                        "Unshaded",
+                    pc.iconTextButton(
+                        label="Unshaded",style="textOnly", font="smallPlainLabelFont", bgc=(0.35,0.4,0.45),
                         c=pc.Callback(self.set_shapes_attr, "overrideShading", 0)
                     )
-                    pc.button(
-                        "Selectable",
+                    pc.iconTextButton(
+                        label="Selectable", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.45,0.4),
                         c=pc.Callback(self.set_shapes_attr, "overrideDisplayType", 0)
                     )
-                    pc.button(
-                        "Not Selectable",
+                    pc.iconTextButton(
+                        label="Unselectable", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.45,0.4),
                         c=pc.Callback(self.set_shapes_attr, "overrideDisplayType", 2)
-                    ) 
+                    )
+                    pc.iconTextButton(
+                        label="Unrenderable", style="textOnly", font="smallPlainLabelFont", bgc=(0.45,0.4,0.4),
+                        c=pc.Callback(self.set_unrenderable)
+                    )
 
                 pc.separator(h=10)
 
                 with pc.horizontalLayout(ratios=[2,1,1,1,1,1]):
                     pc.text(label="Toggle Lock+Hide")
-                    pc.button(
-                        "Trans",
+                    pc.iconTextButton(
+                        label="Trans", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.4,0.4),
                         c=pc.Callback(self.toggle_lock_hide, ["tx", "ty", "tz"])
                     )
-                    pc.button(
-                        "Rot",
+                    pc.iconTextButton(
+                        label="Rot", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.4,0.4),
                         c=pc.Callback(self.toggle_lock_hide, ["rx", "ry", "rz"])
                     )
-                    pc.button(
-                        "Scale",
+                    pc.iconTextButton(
+                        label="Scale", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.4,0.4),
                         c=pc.Callback(self.toggle_lock_hide, ["sx", "sy", "sz"])
                     )
-                    pc.button(
-                        "Vis",
+                    pc.iconTextButton(
+                        label="Vis", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.4,0.4),
                         c=pc.Callback(self.toggle_lock_hide, ["visibility"])
                     ) 
-                    pc.button(
-                        "All",
+                    pc.iconTextButton(
+                        label="All", style="textOnly", font="smallPlainLabelFont", bgc=(0.4,0.4,0.4),
                         c=pc.Callback(
                             self.toggle_lock_hide,
                             ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "visibility"])
@@ -303,7 +307,6 @@ class RigIcons():
             self.icons[i]['transforms'], name
         )
         if snap_to and snap_to.hasAttr("tx"):
-            print snap_to.type()
             cnstr = pc.parentConstraint(snap_to, top_transform)
             pc.delete(cnstr)
         if self.config['std_color']:
@@ -414,7 +417,12 @@ class RigIcons():
     def set_shapes_attr(self, attr, value):
         for obj in pc.selected():
             for shape in obj.getShapes():
+                shape.setAttr("overrideEnabled", 1)
                 shape.setAttr(attr, value)
+
+    def set_unrenderable(self):
+        for obj in pc.selected():
+            set_unrenderable(obj.getShapes())
 
     def toggle_lock_hide(self, channels):
         for obj in pc.selected():

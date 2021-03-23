@@ -1,7 +1,7 @@
 """Module providing functions to generate and edit Maya ik setups.
 """
 import pymel.core as pc
-from utils import scalefactor_node, hierarchy_len, locator_at_point, insert_normalized_scale_node
+from .utils import scalefactor_node, hierarchy_len, locator_at_point, insert_normalized_scale_node
 from cg.maya.utils.hirarchies import add_group
 
 
@@ -28,7 +28,6 @@ def ik_stretch(ik_handle, pole=None, lock=False, max_stretch=5, name=None, paren
     )
     :raises: None
     """
-
     joints = ik_handle.getJointList()
     joints.append(joints[-1].getChildren(type="joint")[0])
 
