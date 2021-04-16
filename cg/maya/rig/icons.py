@@ -295,7 +295,13 @@ class RigIcons():
                     n = "_".join(n.split("_")[:-1]) or n
                 transforms.append(self.create_rig_icon(i, n, group, obj))
         elif len(sel) == 1:
-            transforms.append(self.create_rig_icon(i, name, group, sel[0]))
+            n = ""
+            if name:
+                n = "{}_{}".format(name, j)
+            else:
+                n = sel[0].name()
+                n = "_".join(n.split("_")[:-1]) or n
+            transforms.append(self.create_rig_icon(i, n, group, sel[0]))
         else:
             transforms.append(self.create_rig_icon(i, name, group))
         pc.select(transforms)

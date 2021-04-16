@@ -5,7 +5,7 @@ https://github.com/colour-science/OpenColorIO-Configs/tree/feature/aces-1.1-conf
 
 Place the downloaded OCIO-folder outside your NextCloud-synced folder if you want to avoid syncing GigaBytes of stuff and annoying your group members.
 
-Create a system environment variable named "OCIO" which points to your OCIO folder and your chosen version (e.g. "D:/ocio/aces_1.1/config.ocio"). 
+Create a system environment variable named "OCIO" which points to your OCIO folder and your chosen version (e.g. "C:/ocio/aces_1.1/config.ocio"). 
 
 
 --------------------------------------------
