@@ -48,8 +48,9 @@ def load_config():
 
 def set_basepath_env(base_path=None, config=None):
     if not base_path:
+        config_file = get_config_file()
         if not config:
-            config_file = get_config_file()
+            # config_file = get_config_file()
             config = load_config()
         end = len(config["minipipe_dir"]) + len("/minipipe_config.json") + 1
         base_path = config_file[:-end]
