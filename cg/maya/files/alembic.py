@@ -45,7 +45,7 @@ def abc_export(root, file, frameRanges=[{"start": 1, "end": 1}], attrs=[],
         attrPrefix_str,
         " -dataFormat ", dataFormat,
         " -root ", root,
-        " -file ", file, "\""
+        " -file \\\"", file, "\\\"\""
     ])
     print(mel)
     pc.mel.eval(mel)
