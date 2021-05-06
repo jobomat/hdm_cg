@@ -2,6 +2,21 @@ import pymel.core as pc
 import maya.OpenMaya as om
 
 
+def get_orig_shape(transform):
+    origs = [s for s in transform.getShapes() if s.getAttr("intermediateObject")]
+    if origs:
+        return origs[0]
+    return None
+
+
+def get_blendShape_nodes(transform):
+    bs_nodes = []
+    for obj_set in transform.getShape().connections(type="objectSet"):
+        bs_nodes.extend(obj_set.connections(type="blendShape"))
+
+    return list(set(bs_nodes))
+
+
 def place_at_point(child, parent, orient=False):
     """Places or places and orients child at parent.
 
@@ -389,19 +404,17 @@ def get_soft_selection_values():
     component = om.MObject()
 
     iter = om.MItSelectionList(selection, om.MFn.kMeshVertComponent)
-    vtx_list = []
     weight_list = []
     while not iter.isDone():
         iter.getDagPath(dagPath, component)
         dagPath.pop()
-        node = dagPath.fullPathName()
         fnComp = om.MFnSingleIndexedComponent(component)
 
         for i in range(fnComp.elementCount()):
-            vtx_list.append("{}.vtx[{}]".format(node, fnComp.element(i)))
-            weight_list.append([fnComp.element(i), fnComp.weight(i).influence()])
+            weight_list.append(
+                (fnComp.element(i), fnComp.weight(i).influence()))
         iter.next()
-    return vtx_list, weight_list
+    return sorted(weight_list, key=lambda x: x[1], reverse=True)
 
 
 def soft_cluster(name="inf", cluster=None):
@@ -428,3 +441,47 @@ def set_cluster_pivots_to_pos(cluster_handle, pos):
     cluster_handle.setAttr("scalePivot", pos)
     cluster_handle.setAttr("rotatePivot", pos)
     cluster_handle.getShape().setAttr("origin", pos)
+
+
+def create_soft_cluster(name="inf", shape=None, weight_list=None, pivot_pos=None):
+    weight_list = weight_list or get_soft_selection_values()
+    pivot_pos = pivot_pos or shape.vtx[weight_list[0][0]].getPosition(
+        space="world")
+
+    if shape is None:
+        shape = pc.selected(fl=True)[0].node()
+
+    vtx_list = ["{}.vtx[{}]".format(shape.name(), w[0]) for w in weight_list]
+    pc.select(cl=True)
+
+    pc.select(vtx_list, r=True)
+    cluster, cluster_handle = pc.cluster(
+        relative=True, name="{}_cl".format(name))
+
+    for vtx, weight in zip(vtx_list, weight_list):
+        pc.percent(cluster, vtx, v=weight[1])
+
+    pc.select(cl=True)
+
+    set_cluster_pivots_to_pos(cluster_handle, pivot_pos)
+
+    return cluster_handle
+
+
+def edit_soft_cluster(cluster_handle):
+    weight_list = get_soft_selection_values()
+
+    shape_name = pc.selected()[0].node().name()
+    vtx_list = ["{}.vtx[{}]".format(shape_name, w[0]) for w in weight_list]
+    pc.select(cl=True)
+
+    mesh = pc.cluster(cluster_handle, q=True, g=True)[0]
+    cluster = cluster_handle.attr(
+        "worldMatrix").listConnections(type="cluster")[0]
+    cluster_set = pc.listConnections(cluster, type="objectSet")[0]
+    pc.cluster(cluster_handle, edit=True, g=mesh, rm=True)
+    pc.sets(cluster_set, add=pc.ls(vtx_list))
+
+    for vtx, weight in zip(vtx_list, weight_list):
+        pc.percent(cluster, vtx, v=weight[1])
+    pc.select(cl=True)

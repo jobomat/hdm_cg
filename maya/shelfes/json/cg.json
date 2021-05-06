@@ -91,9 +91,9 @@
             "sourceType": "python", 
             "image": "stickyControlerSetup.png", 
             "label": "Sticky Controler", 
-            "command": "import cg.maya.rig.ctrl as ctrl\nreload(ctrl)\n\nctrl.StickyControl().gui()", 
+            "command": "import cg.maya.rig.ctrl as ctrl\n\nctrl.StickyControl()", 
             "image1": "stickyControlerSetup.png", 
-            "annotation": "Sticky Controler Setup"
+            "annotation": "Sticky Controler Setup and Editing"
         }
     ], 
     "name": "cg", 

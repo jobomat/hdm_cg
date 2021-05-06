@@ -1,6 +1,7 @@
 from collections import defaultdict
 import pymel.core as pc
 import cg.maya.rig.utils as utils
+from cg.maya.rig.utils import get_soft_selection_values, create_soft_cluster, edit_soft_cluster
 import cg.maya.utils.nodes as nodes
 import cg.maya.utils.hirarchies as hirarchies
 reload(hirarchies)
@@ -170,300 +171,563 @@ def four_corner_control(name):
     return ctrl
 
 
+def create_sticky_base_setup(
+    transform, name="sticky", bs_transform=None, bs_node=None, bs_channel=None, proximity_node=None
+):
+    sticky_grp = pc.group(empty=True, n="{}_grp".format(name))
+    for channel in ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]:
+        sticky_grp.attr(channel).setKeyable(
+            not sticky_grp.attr(channel).isKeyable())
+        sticky_grp.attr(channel).setLocked(
+            not sticky_grp.attr(channel).isLocked())
+    sticky_grp.addAttr("controler_visibility", at="bool", dv=1)
+    sticky_grp.addAttr("sticky_blendshape_transform", at="bool")
+    sticky_grp.addAttr("sticky_blendshape_node", at="bool")
+    sticky_grp.addAttr("sticky_proximityPin", at="bool")
+    sticky_grp.addAttr("sticky_transform", at="bool")
+    sticky_grp.addAttr("sticky_controls", at="bool")
+    transform.addAttr("sticky_grp", at="bool", dv=1)
+    transform.sticky_grp >> sticky_grp.sticky_transform
+
+    # check bs_transform
+    shape_index = None
+    if bs_node and bs_channel and bs_transform:
+        shape_index = bs_channel
+    else:
+        if not bs_transform:
+            bs_transform = pc.duplicate(transform)[0]
+            bs_transform.rename("{}_bs_geo".format(name))
+            bs_transform.hide()
+            pc.parent(bs_transform, sticky_grp)
+        if not bs_node:
+            bs_node = pc.blendShape(bs_transform, transform, automatic=True)[0]
+        else:
+            bs_node.addTarget(
+                baseObject=transform.getShape(),
+                weightIndex=bs_node.weight.numElements(),
+                newTarget=bs_transform.getShape(),
+                fullWeight=1.0, targetType='object'
+            )
+        shape_index = bs_node.weight.numElements() - 1
+        pc.aliasAttr("sticky_controls", "{}.w[{}]".format(
+            bs_node.name(), shape_index))
+    bs_node.setAttr("weight[{}]".format(shape_index), 1)
+
+    sticky_grp.addAttr("sticky_bs_weight_index", at="short")
+    sticky_grp.setAttr("sticky_bs_weight_index", shape_index)
+
+    if not bs_transform.hasAttr("sticky_grp"):
+        bs_transform.addAttr("sticky_grp", at="bool")
+    sticky_grp.sticky_blendshape_transform >> bs_transform.sticky_grp
+    if not bs_node.hasAttr("sticky_grp"):
+        bs_node.addAttr("sticky_grp", at="bool")
+    sticky_grp.sticky_blendshape_node >> bs_node.sticky_grp
+
+    # check proximity_node
+    if not proximity_node:
+        pc.select(transform, r=True)
+        pc.mel.eval("ProximityPin;")
+        proximity_node = pc.selected()[0]
+        proximity_node.rename("{}_proximityPin".format(name))
+        proximity_node.setAttr("offsetOrientation", 1)
+        pc.select(cl=True)
+    proximity_node.addAttr("sticky_grp", at="bool")
+    sticky_grp.sticky_proximityPin >> proximity_node.sticky_grp
+
+    return sticky_grp
+
+
+def get_sticky_grp(transform):
+    if transform.hasAttr("sticky_grp"):
+        if transform.attr("sticky_grp").listConnections():
+            return transform.attr("sticky_grp").listConnections()[0]
+    return None
+
+
+def get_sticky_blendshape_transform(sticky_grp):
+    return sticky_grp.attr("sticky_blendshape_transform").listConnections()[0]
+
+
+def get_sticky_blendshape_node(sticky_grp):
+    return sticky_grp.attr("sticky_blendshape_node").listConnections()[0]
+
+
+def get_sticky_proximityPin(sticky_grp):
+    return sticky_grp.attr("sticky_proximityPin").listConnections()[0]
+
+
+def get_sticky_transform(sticky_grp):
+    return sticky_grp.attr("sticky_transform").listConnections()[0]
+
+
+def get_sticky_shape(sticky_grp):
+    return [
+        s for s in get_sticky_transform(sticky_grp).getShapes()
+        if not s.getAttr("intermediateObject")
+    ][0]
+
+
+def get_sticky_bs_shape(sticky_grp):
+    return get_sticky_blendshape_transform(sticky_grp).getShape()
+
+
+def get_sticky_shape_orig(sticky_grp):
+    return get_sticky_proximityPin(sticky_grp).attr("originalGeometry").listConnections()[0]
+
+
+def get_ctrl_grp(ctrl):
+    return ctrl.getParent().getParent().getParent()
+
+
+def get_or_create_sticky_grp(transform, bs_node=None, bs_channel=None, bs_transform=None):
+    if transform.hasAttr("sticky_grp"):
+        con = transform.attr("sticky_grp").listConnections()
+        if con:
+            return con[0]
+        else:
+            transform.deleteAttr("sticky_grp")
+    return create_sticky_base_setup(transform, bs_node=bs_node, bs_channel=bs_channel, bs_transform=bs_transform)
+
+
+def create_sticky_control(
+    name="sticky", transform=None,
+    bs_transform=None, bs_node=None, bs_channel=None, orient_to=None,
+    weight_list=None, ctrl=None, input_pin_pos=None,
+    translate=True, rotate=True, scale=True
+):
+    if not weight_list:
+        weight_list = get_soft_selection_values()
+
+    sticky_grp = get_or_create_sticky_grp(
+        transform, bs_node=bs_node, bs_channel=bs_channel, bs_transform=bs_transform,
+    )
+    sticky_bs_shape = get_sticky_bs_shape(sticky_grp)
+    proximity_node = get_sticky_proximityPin(sticky_grp)
+
+    if not input_pin_pos:
+        input_pin_pos = get_sticky_blendshape_transform(sticky_grp).getShape().vtx[
+            weight_list[0][0]
+        ].getPosition(space="world")
+
+    ctrl_grp = pc.group(empty=True, n="{}_ctrl_grp".format(name))
+    sticky_grp.controler_visibility >> ctrl_grp.visibility
+    pc.parent(ctrl_grp, sticky_grp)
+
+    cluster_handle = create_soft_cluster(
+        name=name, shape=sticky_bs_shape,
+        weight_list=weight_list, pivot_pos=input_pin_pos
+    )
+    cluster_handle.hide()
+    pc.parent(cluster_handle, sticky_grp)
+
+    input_pin = pc.group(empty=True, n="{}_input_pin".format(name))
+    pc.parent(input_pin, ctrl_grp)
+    output_pin = pc.group(empty=True, n="{}_ouput_pin".format(name))
+    pc.parent(output_pin, ctrl_grp)
+    if orient_to:
+        pc.orientConstraint(orient_to, output_pin, maintainOffset=True)
+
+    input_pin.setTranslation(input_pin_pos, space="world")
+
+    indices = proximity_node.attr("inputMatrix").getArrayIndices()
+    i = 0 if not indices else max(indices) + 1
+    input_pin.matrix >> proximity_node.attr("inputMatrix[{}]".format(i))
+    proximity_node.attr("outputMatrix[{}]".format(
+        i)) >> output_pin.offsetParentMatrix
+
+    offset_grp = pc.group(empty=True, n="{}_offset_grp".format(name))
+    ctrl = pc.circle(radius=0.2)[0]
+    ctrl.rename("{}_ctrl".format(name))
+    pc.delete(ctrl, ch=True)
+    pc.parent(offset_grp, output_pin)
+    pc.parent(ctrl, offset_grp)
+    ctrl.addAttr("sticky_grp", at="bool")
+    ctrl.addAttr("proximity_pin_index", at="short")
+    ctrl.setAttr("proximity_pin_index", i)
+    sticky_grp.sticky_controls >> ctrl.sticky_grp
+
+    neg_mult = pc.createNode("multiplyDivide", n="{}_neg_mult".format(name))
+
+    neg_mult.setAttr("input2", [-1, -1, -1])
+    ctrl.translate >> neg_mult.input1
+    neg_mult.output >> offset_grp.translate
+    if translate:
+        ctrl.translate >> cluster_handle.translate
+    if rotate:
+        ctrl.rotate >> cluster_handle.rotate
+    if scale:
+        ctrl.scale >> cluster_handle.scale
+
+    pc.select(ctrl)
+
+
+def create_mirrored_sticky_control(ctrl, name, mirror_matrix=[-1, 1, 1]):
+    input_pin = ctrl.getParent().getParent().getSiblings()[0]
+    input_pin_pos = [
+        v*s for v, s in zip(input_pin.getTranslation(space="world"), mirror_matrix)
+    ]
+
+    cluster_handle = ctrl.attr(
+        "translate").listConnections(type="transform")[0]
+    cluster = cluster_handle.attr(
+        "worldMatrix").listConnections(type="cluster")[0]
+    cluster_set = pc.listConnections(cluster, type="objectSet")[0]
+    pc.select(cluster_set.flattened())
+    verts = pc.selected(fl=True)
+
+    transform = get_sticky_transform(
+        ctrl.getParent().getParent().getParent().getParent())
+
+    weight_list = []
+    for vert in verts:
+        pc.select(vert, symmetry=True)
+        sym_verts = [v for v in pc.selected() if v != vert]
+        sym_vert = vert if not sym_verts else sym_verts[0]
+        weight_list.append(
+            (sym_vert.index(), pc.percent(cluster, vert, q=True, v=True)[0])
+        )
+
+    constraints = ctrl.getParent().getSiblings(type="orientConstraint")
+    orient_con = None if not constraints else constraints[0]
+    orient_to = None
+    if orient_con:
+        orient_to = orient_con.attr(
+            "target[0].targetParentMatrix").listConnections()[0]
+
+    create_sticky_control(
+        name=name, transform=transform, bs_node=None, orient_to=orient_to,
+        weight_list=weight_list, input_pin_pos=input_pin_pos
+    )
+
+
 class StickyControl():
     def __init__(self):
-        self.orig_geo_shape = None
-        self.orient_parent = None
-        self.maintain_orient_offset = True
-        self.edit_ui = defaultdict(dict)
-        self.edit_action = None
-        self.edit_controlers = []
-        self.edit_attach_mesh = None
-        self.edit_orient_object = None
+        self.win_id = "sticky_ctrl_window"
+        self.sticky_bs_node = None
+        self.orient_to = None
+        self.bs_transform = None
+        if pc.window(self.win_id, q=1, exists=1):
+            pc.showWindow(self.win_id)
+            return
+        else:
+            self.gui()
+        self.mode = "create"
 
     def gui(self):
-        win_id = "sticky_ctrl_window"
         window_width = 250
-        window_height = 275
+        window_height = 296
 
-        if pc.window(win_id, q=1, exists=1):
-            pc.deleteUI(win_id)
+        if pc.window(self.win_id, q=1, exists=1):
+            pc.deleteUI(self.win_id)
 
-        with pc.window(win_id, title="Sticky Control", wh=[window_width, window_height]) as self.win:
+        with pc.window(self.win_id, title="Sticky Control", wh=[window_width, window_height]) as self.win:
             with pc.formLayout() as form_layout:
-                with pc.tabLayout(innerMarginWidth=7, innerMarginHeight=7) as tab_layout:
-                    with pc.frameLayout(borderVisible=False, labelVisible=False, marginWidth=7, marginHeight=7):
+                with pc.columnLayout(adj=True) as cl:
+                    with pc.frameLayout(visible=False, borderVisible=False, label="Create Sticky Control", marginWidth=7, marginHeight=7) as self.create_gui:
                         with pc.columnLayout(adj=True, rs=6):
                             self.name_textField = pc.textFieldGrp(
                                 label="Name: ", text="on_mesh", cw2=[40, 2], adj=2
                             )
-
                             pc.separator(h=1)
-
-                            self.autodetect_checkBox = pc.checkBox(
-                                label="Autodetect Sticky mesh", value=True,
-                                cc=self.toggle_autodetect
-                            )
-                            self.sticky_object_text = pc.text(
-                                label="Sticky mesh: Not specified", align="left",
-                                font="boldLabelFont"
-                            )
-                            self.sticky_object_button = pc.button(
-                                label="Set selected mesh as sticky mesh.", enable=False,
-                                c=self.assign_sticky_object
-                            )
-
+                            pc.text(label="Connect:", align="left")
+                            with pc.horizontalLayout():
+                                self.translate_checkBox = pc.checkBox(
+                                    label="Translate", value=True
+                                )
+                                self.rotate_checkBox = pc.checkBox(
+                                    label="Rotate", value=True
+                                )
+                                self.scale_checkBox = pc.checkBox(
+                                    label="Scale", value=True
+                                )
                             pc.separator(h=1)
-
-                            self.orient_object_text = pc.text(
-                                label="Orient Object: Not specified", align="left",
-                                font="boldLabelFont"
-                            )
-                            self.orient_object_button = pc.button(
-                                label="Set Selected as orient object.",
-                                c=self.assign_orient_object
-                            )
-                            self.maintain_offset_checkBox = pc.checkBox(
-                                label="Maintain orient offset", value=True
-                            )
-
+                            pc.text("Orient the Control to Object (Optional)")
+                            with pc.horizontalLayout(ratios=[3, 1]):
+                                self.orient_to_textField = pc.textField(
+                                    pht="MMB Drop Object here",
+                                    tcc=self.set_orient_to,
+                                    editable=self.orient_to is None,
+                                    text="" if self.orient_to is None else self.orient_to.name()
+                                )
+                                pc.button(label="Clear", c=pc.Callback(
+                                    self.clear_orient_to, None))
+                            pc.separator(h=1)
+                            with pc.optionMenu(label="BlendShape Node: ", cc=self.build_bs_channel_menu) as self.bs_option_menu:
+                                pc.menuItem("Create New")
+                            with pc.optionMenu(label="BlendShape Channel: ") as self.bs_channel_menu:
+                                pc.menuItem("---")
+                            with pc.horizontalLayout(ratios=[3, 1]):
+                                self.bs_transform_textField = pc.textField(
+                                    pht="MMB Drop BlendShape Geo here",
+                                    tcc=self.set_bs_transform,
+                                    editable=self.bs_transform is None,
+                                    text="" if self.bs_transform is None else self.bs_transform.name()
+                                )
+                                pc.button(label="Clear", c=pc.Callback(
+                                    self.clear_bs_transform, None))
                             pc.separator(h=1)
 
                             self.create_button = pc.button(
-                                label="Create", enable=False,
-                                c=self.create_setup
+                                label="Create", c=self.create_sticky_ctrl
                             )
-                    with pc.frameLayout(borderVisible=False, labelVisible=False, marginWidth=7, marginHeight=7):
+                    with pc.frameLayout(visible=False, borderVisible=False, label="Edit / Delete Sticky Controler", marginWidth=7, marginHeight=7) as self.edit_gui:
                         with pc.columnLayout(adj=True, rs=6):
-                            self.edit_sticky_ctrl_textFieldGrp = pc.textFieldButtonGrp(
-                                text="No Controler specified", buttonLabel="Set selected",
-                                cw2=[120, 80], adj=1, enable=True, editable=False,
-                                bc=self.set_edit_controlers
-                            )
-
                             pc.separator(h=1)
-
-                            pc.radioCollection()
-
-                            self.edit_attach_radioButton = pc.radioButton(
-                                label="Attach to another mesh",
-                                onCommand=pc.Callback(self.toggle_edit_ui_enable, "attach")
-                            )
-                            self.edit_ui["attach"]["textFieldButtonGrp"] = pc.textFieldButtonGrp(
-                                text="No mesh specified", buttonLabel="Set selected",
-                                cw2=[120, 80], adj=1, enable=False, editable=False,
-                                bc=self.set_attach_mesh
-                            )
-
+                            pc.text(
+                                label="Orient the Control to Object", align="left")
+                            with pc.horizontalLayout(ratios=[2, 1, 1]):
+                                self.orient_to_textField = pc.textField(
+                                    pht="MMB Drop Object here",
+                                    tcc=self.set_orient_to,
+                                    editable=self.orient_to is None,
+                                    text="" if self.orient_to is None else self.orient_to.name()
+                                )
+                                pc.button(label="Clear", c=pc.Callback(
+                                    self.clear_orient_to, None))
+                                pc.button(label="Orient!", c=pc.Callback(
+                                    self.replace_orient_to))
                             pc.separator(h=1)
-
-                            self.edit_orient_radioButton = pc.radioButton(
-                                label="Orient to another object",
-                                onCommand=pc.Callback(self.toggle_edit_ui_enable, "orient")
-                            )
-                            self.edit_ui["orient"]["textFieldButtonGrp"] = pc.textFieldButtonGrp(
-                                text="No object specified", buttonLabel="Set selected",
-                                cw2=[120, 80], adj=1, enable=False, editable=False,
-                                bc=self.set_orient_object
-                            )
-                            self.edit_ui["orient"]["checkBox"] = pc.checkBox(
-                                label="Maintain orient offset", value=True, enable=False
+                            pc.text(
+                                label="Check 'Symmetry' Settings before Mirroring!", align="left")
+                            pc.text(
+                                label="Topological Symmetry is not supported.", align="left")
+                            with pc.horizontalLayout(ratios=[1, 1]):
+                                self.search_textField = pc.textField(
+                                    pht="Search", width=40
+                                )
+                                self.replace_textField = pc.textField(
+                                    pht="Replace", width=40
+                                )
+                            pc.button(
+                                label="Mirror Selected Sticky Controls",
+                                c=self.create_mirrored_sticky_control
                             )
                             pc.separator(h=1)
+                            self.edit_button = pc.button(
+                                label="Delete Selected Controlers", c=self.delete_sticky_ctrl)
+                    with pc.frameLayout(visible=True, borderVisible=False, label="Help", marginWidth=7, marginHeight=7) as self.help_gui:
+                        with pc.columnLayout(adj=True, rs=6):
+                            pc.text(label="CREATE CONTROLER",
+                                    align="left", font="boldLabelFont")
+                            pc.text(
+                                label="Select a Vertex and switch to Soft-Select-Mode.\n\nScale should be frozen (1|1|1).\nNone 1 scaling may lead to strange results.", align="left")
+                            pc.separator(h=1)
+                            pc.text(label="EDIT OR DELETE CONTROLER",
+                                    align="left", font="boldLabelFont")
+                            pc.text(
+                                label="Select an existing Sticky Controler.", align="left")
+                            pc.separator(h=1)
 
-                            self.edit_weights_radioButton = pc.radioButton(
-                                label="Reweight Cluster via Soft Selection",
-                                onCommand=pc.Callback(self.toggle_edit_ui_enable, "reweight")
-                            )
+            form_layout.attachForm(cl, 'top', 0)
+            form_layout.attachForm(cl, 'left', 0)
+            form_layout.attachForm(cl, 'bottom', 0)
+            form_layout.attachForm(cl, 'right', 0)
 
-                            self.edit_button = pc.button(label="Edit", enable=False, c=self.exec_edit)
-
-            form_layout.attachForm(tab_layout, 'top', 0)
-            form_layout.attachForm(tab_layout, 'left', 0)
-            form_layout.attachForm(tab_layout, 'bottom', 0)
-            form_layout.attachForm(tab_layout, 'right', 0)
-
-            tab_layout.setTabLabelIndex((1, 'Create'))
-            tab_layout.setTabLabelIndex((2, 'Edit'))
-
-        self.script_job = pc.scriptJob(e=("SelectionChanged", self.check_prerequisites))
+        self.script_job = pc.scriptJob(
+            e=("SelectionChanged", self.check_prerequisites))
         self.win.closeCommand(self.kill_script_jobs)
         self.win.setWidthHeight([window_width, window_height])
         self.check_prerequisites()
 
-    def exec_edit(self, *args):
-        if self.edit_action == "reweight":
-            self.reweight_cluster()
-        elif self.edit_action == "attach":
-            glue_to_shape(self.edit_controlers, self.edit_attach_mesh)
-        elif self.edit_action == "orient":
-            self.replace_orient_constraint()
-
-    def replace_orient_constraint(self):
-        for controler in self.edit_controlers:
-            pc.orientConstraint(
-                self.edit_orient_object,
-                controler.getParent().getParent(),
-                mo=self.edit_ui["orient"]["checkBox"].getValue()
-            )
-
-    def set_edit_controlers(self, *args):
-        self.edit_controlers = []
-        sel = pc.selected()
-        for ctrl in sel:
-            self.edit_cl_handle, self.edit_cl_shape, self.edit_cluster = self.get_cluster_from_ctrl(ctrl)
-            if self.edit_cl_handle:
-                self.edit_sticky_ctrl_textFieldGrp.setText(sel[0])
-                self.edit_controlers.append(ctrl) 
-        self.check_edit_prerequisites()
-        if not self.edit_controlers:
-            self.edit_sticky_ctrl_textFieldGrp.setText("No Controler specified")
-        elif len(self.edit_controlers) == 1:
-            self.edit_sticky_ctrl_textFieldGrp.setText(self.edit_controlers[0])
+    def build_bs_channel_menu(self, *args):
+        self.bs_channel_menu.clear()
+        items = ["---"]
+        if self.bs_option_menu.getEnable():
+            bs.bs_channel_menu.setEnable(True)
+            selection = self.bs_option_menu.getValue()
+            if selection != "Create New":
+                bs_node = pc.PyNode(selection)
+                for i in bs_node.weightIndexList():
+                    items.append(
+                        bs_node.weight[i].getAlias() + " w[" + str(i) + "]")
         else:
-            self.edit_sticky_ctrl_textFieldGrp.setText("Multiple (Hover for Info)")
-            self.edit_sticky_ctrl_textFieldGrp.setAnnotation(
-                "\n".join([c.name() for c in self.edit_controlers])
-            )
+            bs.bs_channel_menu.setEnable(False)
+        self.bs_channel_menu.addMenuItems(items)
 
-    def set_attach_mesh(self, *args):
-        sel = pc.selected()
-        if sel:
-            mesh = sel[0]
-            self.edit_attach_mesh = mesh
-            self.edit_ui["attach"]["textFieldButtonGrp"].setText(mesh)
-        else:
-            self.edit_attach_mesh = None
-            self.edit_ui["attach"]["textFieldButtonGrp"].setText("No mesh specified")
-        self.check_edit_prerequisites()
-
-    def set_orient_object(self):
-        sel = pc.selected()
-        if sel:
-            self.edit_orient_object = sel[0]
-            self.edit_ui["orient"]["textFieldButtonGrp"].setText(sel[0])
-
-    def toggle_edit_ui_enable(self, section):
-        self.edit_action = section
-        for sec, ui_dict in self.edit_ui.items():
-            for name, ui in ui_dict.items():
-                ui.setEnable(False)
-        uis = self.edit_ui.get(section, {})
-        for name, ui in uis.items():
-            ui.setEnable(True)
-
-        self.check_edit_prerequisites()
-
-    def check_edit_prerequisites(self):
-        if not self.edit_controlers or not self.edit_action:
-            self.edit_button.setEnable(False)
-            return
-        elif self.edit_action == "attach" and not self.edit_attach_mesh:
-            self.edit_button.setEnable(False)
-            return
-        elif self.edit_action == "orient" and not self.edit_orient_object:
-            self.edit_button.setEnable(False)
-            return
-        self.edit_button.setEnable(True)
-
-    def reweight_cluster(self):
-        sel = pc.selected()
-        if sel:
-            target_mesh = self.edit_cluster.attr("outputGeometry").listConnections(type="mesh", shapes=True)[0]
-            if sel[0].node() == target_mesh:
-                utils.soft_cluster(cluster=self.edit_cluster)
-            else:
-                pc.warning("Please select Vertices of {}.".format(target_mesh))
-        else:
-            pc.warning("Please Soft-Select some Vertices to reweight.")
-
-    def set_win_height(self, height):
-        self.win.setHeight(height)
-
-    def get_cluster_from_ctrl(self, ctrl):
-        handle = ctrl.attr("t").listConnections(type="transform")
-        if not handle:
-            return None, None, None
-        shape = handle[0].getShape()
-        if not shape:
-            return None, None, None
-        cluster = handle[0].attr("worldMatrix").listConnections(type="cluster")
-        if not cluster:
-            return None, None, None
-        return handle[0], shape, cluster[0]
-
-    def toggle_autodetect(self, checked):
-        if checked:
-            self.sticky_object_button.setEnable(False)
-        else:
-            self.sticky_object_button.setEnable(True)
-
-    def assign_sticky_object(self, args):
-        sel = pc.selected()
-        if not sel:
-            self.orig_geo_shape = None
-            self.sticky_object_text.setLabel("Sticky Mesh: Not specified")
-            return
-        if sel[0].type() == "transform":
-            self.orig_geo_shape = sel[0].getShape()
-            self.sticky_object_text.setLabel("Sticky Object: {}".format(sel[0]))
-
-    def assign_orient_object(self, args):
-        sel = pc.selected()
-        if not sel:
-            self.orient_object_text.setLabel("Orient Object: Not specified")
-            self.orient_parent = None
-        else:
-            self.orient_object_text.setLabel("Orient Object: {}".format(sel[0].name()))
-            self.orient_parent = sel[0]
-
-    def check_prerequisites(self, *args):
-        sel = pc.selected()
-        if not sel or not isinstance(sel[0], pc.MeshVertex):
-            self.create_button.setEnable(False)
-            if self.autodetect_checkBox.getValue():
-                self.sticky_object_text.setLabel("Sticky Mesh: Not specified")
-            return
-
-        if self.autodetect_checkBox.getValue():
+    def set_orient_to(self, obj_name=None):
+        if obj_name:
             try:
-                target_node = sel[0].node().attr("worldMesh").listConnections(type="blendShape")[0]
+                obj = pc.PyNode(obj_name)
             except:
-                self.sticky_object_text.setLabel("Sticky Mesh: Not specified")
-                self.create_button.setEnable(False)
-                self.orig_geo_shape = None
+                obj = None
+            if obj and isinstance(obj, pc.nodetypes.Transform):
+                self.orient_to_textField.setText(obj.name())
+                self.orient_to_textField.setEditable(False)
+                self.orient_to = obj
+                return
+        self.orient_to = None
+        self.orient_to_textField.setText("")
+        self.orient_to_textField.setEditable(True)
+
+    def set_bs_transform(self, obj_name=None):
+        if obj_name:
+            try:
+                obj = pc.PyNode(obj_name)
+            except:
+                obj = None
+            if obj and isinstance(obj, pc.nodetypes.Transform):
+                self.bs_transform_textField.setText(obj.name())
+                self.bs_transform_textField.setEditable(False)
+                self.bs_transform = obj
+                return
+        self.bs_transform = None
+        self.bs_transform_textField.setText("")
+        self.bs_transform_textField.setEditable(True)
+
+    def clear_orient_to(self, *args):
+        self.orient_to_textField.setText("")
+        self.orient_to = None
+
+    def clear_bs_transform(self, *args):
+        self.bs_transform_textField.setText("")
+        self.bs_transform = None
+
+    def replace_orient_to(self, *args):
+        for ctrl in pc.selected():
+            out_pin = ctrl.getParent().getParent()
+            constraint = out_pin.getChildren(type="orientConstraint")
+            if constraint:
+                pc.delete(out_pin.getChildren(type="orientConstraint")[0])
+            if self.orient_to:
+                pc.orientConstraint(self.orient_to, out_pin,
+                                    maintainOffset=True)
+
+    def hide_all_guis(self):
+        self.create_gui.setVisible(False)
+        self.edit_gui.setVisible(False)
+        self.help_gui.setVisible(True)
+
+    def show_gui(self, mode):
+        self.hide_all_guis()
+        self.help_gui.setVisible(False)
+        if mode == "create":
+            self.create_gui.setVisible(True)
+        elif mode == "edit":
+            self.edit_gui.setVisible(True)
+
+    def check_prerequisites(self):
+        sel = pc.selected()
+        if not sel:
+            self.hide_all_guis()
+            return
+        if isinstance(sel[0], pc.nodetypes.Transform):
+            if not sel[0].hasAttr("sticky_grp") or not sel[0].attr("sticky_grp").listConnections():
+                self.hide_all_guis()
                 return
 
-            while target_node.type() != "transform":
-                try:
-                    target_node = target_node.attr("outputGeometry").listConnections()[0]
-                except:
-                    self.sticky_object_text.setLabel("Sticky Mesh: Not specified")
-                    self.create_button.setEnable(False)
-                    self.orig_geo_shape = None
-                    return
-            
-            self.orig_geo_shape = [s for s in target_node.getShapes() if not s.getAttr("intermediateObject")][0]
-            self.sticky_object_text.setLabel(
-                "Sticky Mesh: {}".format(self.orig_geo_shape.name(long=None, stripNamespace=True))
-            )
-        else:
-            if self.orig_geo_shape:
-                self.create_button.setEnable(True)
+            a = sel[0].attr("sticky_grp").listConnections(
+                plugs=True)[0].attrName()
+            if a == "sticky_controls":
+                self.enable_blendShape()
+                self.show_gui("edit")
+            elif a == "sticky_transform":
+                self.hide_all_guis()
+        elif isinstance(sel[0], pc.general.MeshVertex):
+            sticky_grp = get_sticky_grp(sel[0].node().getParent())
+            if sticky_grp:
+                self.disable_blendShape(sticky_grp)
+                self.update_bs_option_menu(
+                    [get_sticky_blendshape_node(sticky_grp).name()], False)
+                self.bs_transform_textField.setEnable(False)
             else:
-                self.create_button.setEnable(False)
-                self.orig_geo_shape = None
+                items = ["Create New"]
+                bs_nodes = sel[0].node().listHistory(type="blendShape")
+                if bs_nodes:
+                    items.extend([b.name() for b in bs_nodes])
+                self.update_bs_option_menu(items, True)
+                self.bs_transform_textField.setEnable(True)
+            self.show_gui("create")
+        else:
+            self.hide_all_guis()
 
-        self.create_button.setEnable(True)
+    def disable_blendShape(self, sticky_grp):
+        self.sticky_bs_node = get_sticky_blendshape_node(sticky_grp)
+        self.sticky_bs_weight_index = sticky_grp.getAttr(
+            "sticky_bs_weight_index")
+        self.sticky_bs_node.weight[self.sticky_bs_weight_index].set(0)
 
-    def create_setup(self, *args):
-        create_on_mesh_control(
-            pc.selected(fl=True)[0],
-            self.orig_geo_shape,
-            name=self.name_textField.getText(),
-            orient_parent=self.orient_parent,
-            maintain_orient_offset=self.maintain_offset_checkBox.getValue()
+    def enable_blendShape(self):
+        if self.sticky_bs_node:
+            self.sticky_bs_node.weight[self.sticky_bs_weight_index].set(1)
+
+    def update_bs_option_menu(self, items, enable):
+        self.bs_option_menu.clear()
+        self.bs_option_menu.addMenuItems(items)
+        self.bs_option_menu.setEnable(enable)
+
+    def delete_sticky_ctrl(self, *args):
+        ctrls = pc.selected()
+        proximity_node = get_sticky_proximityPin(
+            get_ctrl_grp(ctrls[0]).getParent())
+
+        for ctrl in ctrls:
+            in_attr = proximity_node.attr("inputMatrix[{}]".format(
+                ctrl.getAttr("proximity_pin_index")
+            ))
+            in_attr.listConnections(plugs=True)[0] // in_attr
+
+            out_attr = proximity_node.attr("outputMatrix[{}]".format(
+                ctrl.getAttr("proximity_pin_index")
+            ))
+            out_attr // out_attr.listConnections(plugs=True)[0]
+
+            pc.removeMultiInstance(out_attr, b=True)
+            # delete cluster and multiply node
+            pc.delete(ctrl.attr("translate").listConnections(
+                type="multiplyDivide")[0])
+            pc.delete(ctrl.attr("translate").listConnections(
+                type="transform")[0])
+
+            pc.delete(get_ctrl_grp(ctrl))
+
+    def create_sticky_ctrl(self, *args):
+        name = self.name_textField.getText() or "sticky"
+        bs_node = None
+        print self.orient_to
+        if self.bs_option_menu.getEnable():
+            selection = self.bs_option_menu.getValue()
+            if selection != "Create New":
+                bs_node = pc.PyNode(selection)
+
+        bs_channel = self.bs_channel_menu.getValue()
+        if bs_channel != "---":
+            bs_channel = int(bs_channel.split("[")[1][:-1])
+        else:
+            bs_channel = None
+        create_sticky_control(
+            name=name, bs_transform=self.bs_transform,
+            bs_node=bs_node, bs_channel=bs_channel, orient_to=self.orient_to,
+            transform=pc.selected(fl=True)[0].node().getParent(),
+            translate=self.translate_checkBox.getValue(),
+            rotate=self.rotate_checkBox.getValue(),
+            scale=self.scale_checkBox.getValue()
         )
+
+    def create_mirrored_sticky_control(self, *args):
+        sym_status = pc.symmetricModelling(q=True, symmetry=True)
+        pc.symmetricModelling(symmetry=True)
+        sym_matrix = [
+            -1 if pc.symmetricModelling(q=True, axis=True) == "x" else 1,
+            -1 if pc.symmetricModelling(q=True, axis=True) == "y" else 1,
+            -1 if pc.symmetricModelling(q=True, axis=True) == "z" else 1
+        ]
+        search = self.search_textField.getText()
+        replace = self.replace_textField.getText()
+
+        for ctrl in pc.selected():
+            name = ctrl.name().split("|")[-1]
+            if name.endswith("_ctrl"):
+                name = name[:-5]
+            new_name = name
+            if search and replace:
+                new_name = name.replace(search, replace)
+            if new_name != name:
+                name = new_name
+            else:
+                name = name + "_mirrored"
+            create_mirrored_sticky_control(
+                ctrl, name, mirror_matrix=sym_matrix)
+        pc.symmetricModelling(symmetry=sym_status)
 
     def kill_script_jobs(self, *args):
         pc.scriptJob(kill=self.script_job, force=True)
