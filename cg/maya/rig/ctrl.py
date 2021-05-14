@@ -533,7 +533,7 @@ class StickyControl():
         self.bs_channel_menu.clear()
         items = ["---"]
         if self.bs_option_menu.getEnable():
-            bs.bs_channel_menu.setEnable(True)
+            self.bs_channel_menu.setEnable(True)
             selection = self.bs_option_menu.getValue()
             if selection != "Create New":
                 bs_node = pc.PyNode(selection)
@@ -541,7 +541,7 @@ class StickyControl():
                     items.append(
                         bs_node.weight[i].getAlias() + " w[" + str(i) + "]")
         else:
-            bs.bs_channel_menu.setEnable(False)
+            self.bs_channel_menu.setEnable(False)
         self.bs_channel_menu.addMenuItems(items)
 
     def set_orient_to(self, obj_name=None):
